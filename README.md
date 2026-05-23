@@ -79,7 +79,34 @@ npm run docker:down   # зупинити
 
 Перевірка здоровʼя: `GET /api/health`
 
-### Варіант 2: VPS без Docker
+### Варіант 2: PM2 (VPS без Docker)
+
+```bash
+git clone <repo> /opt/digital_legacy_obs_menu
+cd /opt/digital_legacy_obs_menu
+
+cp .env.example .env
+# ADMIN_PASSWORD=... TRUST_PROXY=true
+
+npm ci
+npm run build
+npm run pm2:start
+
+pm2 save
+pm2 startup   # один раз — автозапуск після перезавантаження
+```
+
+Оновлення після `git pull`:
+
+```bash
+npm run deploy:pm2
+```
+
+Корисні команди: `npm run pm2:logs`, `npm run pm2:restart`, `npm run pm2:stop`
+
+nginx проксує домен на `127.0.0.1:3456` (див. `deploy/nginx.conf.example`).
+
+### Варіант 3: VPS + systemd
 
 ```bash
 git clone <repo> /opt/digital_legacy_obs_menu
