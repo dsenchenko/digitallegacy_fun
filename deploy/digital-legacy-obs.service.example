@@ -1,0 +1,19 @@
+[Unit]
+Description=Digital Legacy OBS Menu
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/opt/digital_legacy_obs_menu
+Environment=NODE_ENV=production
+Environment=PORT=3456
+Environment=HOST=0.0.0.0
+Environment=TRUST_PROXY=true
+EnvironmentFile=/opt/digital_legacy_obs_menu/.env
+ExecStart=/usr/bin/node server/index.js
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,67 @@
+import { useCallback, useEffect, useState } from 'react';
+
+async function parseJsonResponse(response) {
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.error ?? 'Помилка авторизації');
+  }
+  return data;
+}
+
+export function useAuth() {
+  const [loading, setLoading] = useState(true);
+  const [authenticated, setAuthenticated] = useState(false);
+  const [configured, setConfigured] = useState(false);
+
+  const refresh = useCallback(async () => {
+    const data = await fetch('/api/auth/me', { credentials: 'include' })
+      .then((r) => r.json())
+      .catch(() => ({ authenticated: false, configured: false }));
+    setAuthenticated(Boolean(data.authenticated));
+    setConfigured(Boolean(data.configured));
+    setLoading(false);
+    return data;
+  }, []);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  const login = async (password) => {
+    await fetch('/api/auth/login', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+    }).then(parseJsonResponse);
+    await refresh();
+  };
+
+  const setup = async (password) => {
+    await fetch('/api/auth/setup', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+    }).then(parseJsonResponse);
+    await refresh();
+  };
+
+  const logout = async () => {
+    await fetch('/api/auth/logout', {
+      method: 'POST',
+      credentials: 'include',
+    }).catch(() => {});
+    await refresh();
+  };
+
+  return {
+    loading,
+    authenticated,
+    configured,
+    login,
+    setup,
+    logout,
+    refresh,
+  };
+}
