@@ -1,7 +1,5 @@
-import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useDonations, formatDonationMeta } from '../hooks/useDonations';
-import { useAuth } from '../hooks/useAuth';
 import { useWidgetUrl } from '../hooks/useWidgetUrl';
 import { useActiveDebuffs, useCountdown } from '../hooks/useActiveDebuffs';
 import '../styles/admin.css';
@@ -57,9 +55,8 @@ function DonationCard({
   const [nameInput, setNameInput] = useState(donation.name);
   const [priceInput, setPriceInput] = useState(String(donation.price));
   const [durationInput, setDurationInput] = useState(
-    String(donation.durationMinutes ?? 10)
+    String(donation.durationMinutes ?? 0)
   );
-  const [activateDuration, setActivateDuration] = useState('');
 
   useEffect(() => {
     setNameInput(donation.name);
@@ -70,35 +67,54 @@ function DonationCard({
   }, [donation.price]);
 
   useEffect(() => {
-    setDurationInput(String(donation.durationMinutes ?? 10));
+    setDurationInput(String(donation.durationMinutes ?? 0));
   }, [donation.durationMinutes]);
 
   const handleActivate = async () => {
-    const override =
-      activateDuration.trim() === ''
-        ? null
-        : Number(activateDuration);
-    await onActivate(donation.id, donorName, override);
+    await onActivate(donation.id, donorName);
     setDonorName('');
-    setActivateDuration('');
   };
 
-  const handleSaveName = async () => {
+  const handleBlurName = async () => {
     const trimmed = nameInput.trim();
-    if (!trimmed || trimmed === donation.name) return;
-    await onUpdateName(donation.id, trimmed);
+    if (!trimmed) {
+      setNameInput(donation.name);
+      return;
+    }
+    if (trimmed === donation.name) return;
+    try {
+      await onUpdateName(donation.id, trimmed);
+    } catch {
+      setNameInput(donation.name);
+    }
   };
 
-  const handleSavePrice = async () => {
+  const handleBlurPrice = async () => {
     const parsed = Number(priceInput);
+    if (!Number.isInteger(parsed) || parsed <= 0) {
+      setPriceInput(String(donation.price));
+      return;
+    }
     if (parsed === donation.price) return;
-    await onUpdatePrice(donation.id, parsed);
+    try {
+      await onUpdatePrice(donation.id, parsed);
+    } catch {
+      setPriceInput(String(donation.price));
+    }
   };
 
-  const handleSaveDuration = async () => {
+  const handleBlurDuration = async () => {
     const parsed = Number(durationInput);
-    if (parsed === donation.durationMinutes) return;
-    await onUpdateDuration(donation.id, parsed);
+    if (!Number.isInteger(parsed) || parsed < 0) {
+      setDurationInput(String(donation.durationMinutes ?? 0));
+      return;
+    }
+    if (parsed === (donation.durationMinutes ?? 0)) return;
+    try {
+      await onUpdateDuration(donation.id, parsed);
+    } catch {
+      setDurationInput(String(donation.durationMinutes ?? 0));
+    }
   };
 
   const handleDelete = async () => {
@@ -117,11 +133,7 @@ function DonationCard({
     ? 'Випадковий вибір з ігрових дебафів'
     : duration
       ? `Таймер: ${duration}`
-      : 'Потрібна ручна зупинка';
-  const priceChanged = Number(priceInput) !== donation.price;
-  const nameChanged = nameInput.trim() !== donation.name && nameInput.trim() !== '';
-  const durationChanged =
-    donation.hasTimer && Number(durationInput) !== donation.durationMinutes;
+      : 'Без таймера — до ручного зняття';
 
   return (
     <article
@@ -136,16 +148,9 @@ function DonationCard({
               type="text"
               value={nameInput}
               onChange={(e) => setNameInput(e.target.value)}
+              onBlur={handleBlurName}
               disabled={savingName}
             />
-            <button
-              type="button"
-              className="donation-card__price-save"
-              disabled={!nameChanged || savingName}
-              onClick={handleSaveName}
-            >
-              {savingName ? '...' : 'Зберегти'}
-            </button>
           </div>
         </label>
       </div>
@@ -161,64 +166,35 @@ function DonationCard({
               step="1"
               value={priceInput}
               onChange={(e) => setPriceInput(e.target.value)}
+              onBlur={handleBlurPrice}
               disabled={savingPrice}
             />
             <span className="donation-card__price-currency">
               {donation.currency}
             </span>
-            <button
-              type="button"
-              className="donation-card__price-save"
-              disabled={!priceChanged || savingPrice}
-              onClick={handleSavePrice}
-            >
-              {savingPrice ? '...' : 'Зберегти'}
-            </button>
           </div>
         </label>
       </div>
-      {donation.hasTimer && (
+      {!donation.isRandom && (
         <div className="donation-card__price-row">
           <label className="donation-card__price-label">
-            Тривалість (хв)
+            Тривалість (хв, 0 = без таймера)
             <div className="donation-card__price-edit">
               <input
                 className="donation-card__price-input"
                 type="number"
-                min="1"
+                min="0"
                 step="1"
                 value={durationInput}
                 onChange={(e) => setDurationInput(e.target.value)}
+                onBlur={handleBlurDuration}
                 disabled={savingDuration}
               />
-              <button
-                type="button"
-                className="donation-card__price-save"
-                disabled={!durationChanged || savingDuration}
-                onClick={handleSaveDuration}
-              >
-                {savingDuration ? '...' : 'Зберегти'}
-              </button>
             </div>
           </label>
         </div>
       )}
       <div className="donation-card__actions">
-        {donation.hasTimer && (
-          <label className="donation-card__duration-override">
-            Таймер при активації (хв, необовʼязково)
-            <input
-              className="donation-card__input donation-card__input--short"
-              type="number"
-              min="1"
-              step="1"
-              placeholder={String(donation.durationMinutes ?? 10)}
-              value={activateDuration}
-              onChange={(e) => setActivateDuration(e.target.value)}
-              disabled={busy}
-            />
-          </label>
-        )}
         <input
           className="donation-card__input"
           type="text"
@@ -252,14 +228,12 @@ function AddDonationForm({ categoryId, onAdd, busy }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [price, setPrice] = useState('100');
-  const [hasTimer, setHasTimer] = useState(true);
   const [durationMinutes, setDurationMinutes] = useState('10');
   const [description, setDescription] = useState('');
 
   const reset = () => {
     setName('');
     setPrice('100');
-    setHasTimer(true);
     setDurationMinutes('10');
     setDescription('');
     setOpen(false);
@@ -270,8 +244,7 @@ function AddDonationForm({ categoryId, onAdd, busy }) {
     await onAdd(categoryId, {
       name,
       price: Number(price),
-      hasTimer,
-      durationMinutes: hasTimer ? Number(durationMinutes) : null,
+      durationMinutes: Number(durationMinutes),
       description,
     });
     reset();
@@ -313,28 +286,18 @@ function AddDonationForm({ categoryId, onAdd, busy }) {
           required
         />
       </label>
-      <label className="catalog-form__checkbox">
+      <label className="catalog-form__field">
+        Тривалість (хв, 0 = без таймера)
         <input
-          type="checkbox"
-          checked={hasTimer}
-          onChange={(e) => setHasTimer(e.target.checked)}
+          className="catalog-form__input"
+          type="number"
+          min="0"
+          step="1"
+          value={durationMinutes}
+          onChange={(e) => setDurationMinutes(e.target.value)}
+          required
         />
-        Має таймер
       </label>
-      {hasTimer && (
-        <label className="catalog-form__field">
-          Тривалість (хв)
-          <input
-            className="catalog-form__input"
-            type="number"
-            min="1"
-            step="1"
-            value={durationMinutes}
-            onChange={(e) => setDurationMinutes(e.target.value)}
-            required
-          />
-        </label>
-      )}
       <label className="catalog-form__field">
         Опис (необовʼязково)
         <input
@@ -385,8 +348,19 @@ function CategorySection({
     setNameInput(category.name);
   }, [category.name]);
 
-  const nameChanged = nameInput.trim() !== category.name;
-
+  const handleBlurCategoryName = async () => {
+    const trimmed = nameInput.trim();
+    if (!trimmed) {
+      setNameInput(category.name);
+      return;
+    }
+    if (trimmed === category.name) return;
+    try {
+      await onRenameCategory(category.id, trimmed);
+    } catch {
+      setNameInput(category.name);
+    }
+  };
   const handleDeleteCategory = async () => {
     if (
       !window.confirm(
@@ -407,16 +381,10 @@ function CategorySection({
             className="category-header__input"
             value={nameInput}
             onChange={(e) => setNameInput(e.target.value)}
+            onBlur={handleBlurCategoryName}
+            disabled={savingCategoryId === category.id}
           />
         </label>
-        <button
-          type="button"
-          className="catalog-btn catalog-btn--small"
-          disabled={!nameChanged || savingCategoryId === category.id}
-          onClick={() => onRenameCategory(category.id, nameInput.trim())}
-        >
-          {savingCategoryId === category.id ? '...' : 'Зберегти назву'}
-        </button>
         {canDeleteCategory && (
           <button
             type="button"
@@ -487,9 +455,7 @@ function AddCategoryForm({ onAdd, busy }) {
 }
 
 export default function AdminPanel() {
-  const { logout } = useAuth();
-  const { active, connected, activate, deactivate, clearAll } =
-    useActiveDebuffs();
+  const { active, activate, deactivate, clearAll } = useActiveDebuffs();
   const {
     categories,
     updatePrice,
@@ -513,11 +479,11 @@ export default function AdminPanel() {
   const [addingDonationCategoryId, setAddingDonationCategoryId] = useState(null);
   const [error, setError] = useState('');
 
-  const handleActivate = async (donationId, donorName, durationMinutes = null) => {
+  const handleActivate = async (donationId, donorName) => {
     setBusyId(donationId);
     setError('');
     try {
-      await activate(donationId, donorName, durationMinutes);
+      await activate(donationId, donorName);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -532,6 +498,7 @@ export default function AdminPanel() {
       await updatePrice(donationId, price);
     } catch (err) {
       setError(err.message);
+      throw err;
     } finally {
       setSavingPriceId(null);
     }
@@ -544,6 +511,7 @@ export default function AdminPanel() {
       await updateName(donationId, name);
     } catch (err) {
       setError(err.message);
+      throw err;
     } finally {
       setSavingNameId(null);
     }
@@ -556,6 +524,7 @@ export default function AdminPanel() {
       await updateDuration(donationId, durationMinutes);
     } catch (err) {
       setError(err.message);
+      throw err;
     } finally {
       setSavingDurationId(null);
     }
@@ -568,6 +537,7 @@ export default function AdminPanel() {
       await renameCategory(categoryId, name);
     } catch (err) {
       setError(err.message);
+      throw err;
     } finally {
       setSavingCategoryId(null);
     }
@@ -649,41 +619,13 @@ export default function AdminPanel() {
   const menuUrl = `${window.location.origin}/menu`;
 
   return (
-    <main className="admin">
-      <header className="admin__header">
-        <div>
-          <h1 className="admin__title">Адмін-панель донатів</h1>
-          <p className="admin__subtitle">
-            Керуйте каталогом, цінами та активними дебафами
-          </p>
-        </div>
-        <div className="admin__header-right">
-          <Link className="admin__nav-link" to="/admin/giveaways">
-            Розіграші
-          </Link>
-          <a
-            className="admin__nav-link"
-            href="/menu"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Меню для глядачів ↗
-          </a>
-          <div className="admin__status">
-            <span
-              className={`admin__status-dot${connected ? ' admin__status-dot--online' : ''}`}
-            />
-            {connected ? 'Підключено' : 'Відключено'}
-          </div>
-          <button
-            type="button"
-            className="catalog-btn catalog-btn--ghost catalog-btn--small"
-            onClick={() => logout()}
-          >
-            Вийти
-          </button>
-        </div>
-      </header>
+    <>
+      <div className="admin__page-header">
+        <h1 className="admin__title">Адмін-панель донатів</h1>
+        <p className="admin__subtitle">
+          Керуйте каталогом, цінами та активними дебафами
+        </p>
+      </div>
 
       {error && <p className="admin__error">{error}</p>}
 
@@ -784,6 +726,6 @@ export default function AdminPanel() {
           </small>
         </div>
       </div>
-    </main>
+    </>
   );
 }

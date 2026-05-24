@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import '../styles/admin.css';
 
-export default function AdminLogin({ setup = false, onLogin, onSetup }) {
+export default function AdminLogin({ setup = false, authSource = null, onLogin, onSetup }) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -39,7 +39,9 @@ export default function AdminLogin({ setup = false, onLogin, onSetup }) {
         <p className="admin-auth__subtitle">
           {setup
             ? 'Створіть пароль для захисту адмін-панелі. Його можна також задати через ADMIN_PASSWORD.'
-            : 'Введіть пароль адміністратора'}
+            : authSource === 'env'
+              ? 'Пароль береться з ADMIN_PASSWORD у файлі .env (не з форми налаштування).'
+              : 'Введіть пароль адміністратора'}
         </p>
         <form className="admin-auth__form" onSubmit={handleSubmit}>
           <label className="admin-auth__field">

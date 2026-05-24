@@ -78,7 +78,7 @@ export function getActiveDebuffs() {
   return activeDebuffs.map((d) => ({ ...d }));
 }
 
-export function activateDebuff(donationId, donorName = '', durationOverride = null) {
+export function activateDebuff(donationId, donorName = '') {
   const donation = getDonationById(donationId);
   if (!donation) {
     throw new Error(`Невідомий донат: ${donationId}`);
@@ -96,24 +96,11 @@ export function activateDebuff(donationId, donorName = '', durationOverride = nu
     isRandomResult = true;
   }
 
-  const durationMinutes =
-    durationOverride !== null && durationOverride !== undefined
-      ? Number(durationOverride)
-      : effective.durationMinutes;
-
-  if (
-    durationOverride !== null &&
-    durationOverride !== undefined &&
-    (!Number.isInteger(durationMinutes) || durationMinutes <= 0)
-  ) {
-    throw new Error('Тривалість має бути цілим числом більше 0');
-  }
+  const durationMinutes = effective.durationMinutes ?? 0;
+  const hasTimer = durationMinutes > 0;
 
   const now = Date.now();
-  const expiresAt =
-    effective.hasTimer && durationMinutes
-      ? now + durationMinutes * 60 * 1000
-      : null;
+  const expiresAt = hasTimer ? now + durationMinutes * 60 * 1000 : null;
 
   const debuff = {
     id: uuidv4(),
@@ -126,7 +113,7 @@ export function activateDebuff(donationId, donorName = '', durationOverride = nu
     donorName: donorName.trim(),
     startedAt: now,
     expiresAt,
-    hasTimer: effective.hasTimer,
+    hasTimer,
     isRandomResult,
     pickedDebuffId: isRandomResult ? effective.id : null,
   };

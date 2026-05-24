@@ -12,13 +12,15 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
   const [configured, setConfigured] = useState(false);
+  const [authSource, setAuthSource] = useState(null);
 
   const refresh = useCallback(async () => {
     const data = await fetch('/api/auth/me', { credentials: 'include' })
       .then((r) => r.json())
-      .catch(() => ({ authenticated: false, configured: false }));
+      .catch(() => ({ authenticated: false, configured: false, authSource: null }));
     setAuthenticated(Boolean(data.authenticated));
     setConfigured(Boolean(data.configured));
+    setAuthSource(data.authSource ?? null);
     setLoading(false);
     return data;
   }, []);
@@ -59,6 +61,7 @@ export function useAuth() {
     loading,
     authenticated,
     configured,
+    authSource,
     login,
     setup,
     logout,

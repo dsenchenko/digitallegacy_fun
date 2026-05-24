@@ -80,6 +80,12 @@
   font-size: 1.05rem;
 }
 
+.giveaway-detail__widget-status {
+  margin: 0.5rem 0 0;
+  color: #9aa0a6;
+  font-size: 0.9rem;
+}
+
 .giveaway-detail__subtitle {
   margin: 1.25rem 0 0.75rem;
 }

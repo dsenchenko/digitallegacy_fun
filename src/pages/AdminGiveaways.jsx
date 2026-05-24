@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import {
   createGiveaway,
   giveawayStatusLabel,
@@ -150,6 +149,7 @@ function GiveawayDetail({ giveawayId, onClose }) {
     removeParticipant,
     drawWinner,
     deleteGiveaway,
+    setWidgetDisplay,
   } = useGiveawayAdmin(giveawayId);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState('');
@@ -201,11 +201,54 @@ function GiveawayDetail({ giveawayId, onClose }) {
               🏆 Переможець: <strong>{giveaway.winner.name}</strong>
             </p>
           )}
+          {giveaway.status === 'drawn' && (
+            <p className="giveaway-detail__widget-status">
+              Віджет OBS:{' '}
+              {giveaway.showOnWidget ? 'показується' : 'приховано'}
+            </p>
+          )}
         </div>
       </div>
 
       {(error || actionError) && (
         <p className="admin__error">{actionError || error}</p>
+      )}
+
+      {giveaway.status === 'drawn' && (
+        <div className="giveaway-detail__actions">
+          <button
+            type="button"
+            className="catalog-btn"
+            disabled={busy}
+            onClick={() =>
+              run(() => setWidgetDisplay(!giveaway.showOnWidget))
+            }
+          >
+            {giveaway.showOnWidget
+              ? 'Приховати з віджета'
+              : 'Показати на віджеті'}
+          </button>
+          <button
+            type="button"
+            className="catalog-btn catalog-btn--danger"
+            disabled={busy}
+            onClick={() => {
+              if (
+                !window.confirm(
+                  `Видалити розіграш «${giveaway.title}»? Цю дію не можна скасувати.`
+                )
+              ) {
+                return;
+              }
+              run(async () => {
+                await deleteGiveaway();
+                onClose();
+              });
+            }}
+          >
+            Видалити розіграш
+          </button>
+        </div>
       )}
 
       {giveaway.status !== 'drawn' && (
@@ -299,24 +342,14 @@ export default function AdminGiveaways() {
   const [selectedId, setSelectedId] = useState(null);
 
   return (
-    <main className="admin">
-      <header className="admin__header">
-        <div>
-          <h1 className="admin__title">Розіграші</h1>
-          <p className="admin__subtitle">
-            Створюйте розіграші, додавайте учасників вручну після донату, обирайте
-            переможця з урахуванням кількості квитків
-          </p>
-        </div>
-        <div className="admin__header-right">
-          <Link className="admin__nav-link" to="/admin">
-            ← Донати
-          </Link>
-          <Link className="admin__nav-link" to="/menu" target="_blank" rel="noreferrer">
-            Меню ↗
-          </Link>
-        </div>
-      </header>
+    <>
+      <div className="admin__page-header">
+        <h1 className="admin__title">Розіграші</h1>
+        <p className="admin__subtitle">
+          Створюйте розіграші, додавайте учасників вручну після донату, обирайте
+          переможця з урахуванням кількості квитків
+        </p>
+      </div>
 
       <CreateGiveawayForm onCreated={setSelectedId} />
 
@@ -362,6 +395,6 @@ export default function AdminGiveaways() {
       {selectedId && (
         <GiveawayDetail giveawayId={selectedId} onClose={() => setSelectedId(null)} />
       )}
-    </main>
+    </>
   );
 }

@@ -1,23 +1,24 @@
-import { DONATION_URL } from '../config';
+import { DONATION_GOAL, DONATION_PROXY_PATH } from '../config';
 
 /**
- * Builds a Donatello donation URL with prefilled amount and message.
- * Donatello query params: a = amount (UAH), m = message (max 500 chars)
- * @see https://donatello.to/user/user.js
+ * Builds a donation URL with prefilled amount and message.
+ * Uses our /digitallegacyua proxy so Donatello prefill params (a, m)
+ * do not lock the inputs — see server/donateProxy.js.
  */
 export function buildDonatelloUrl(donation) {
-  const url = new URL(DONATION_URL);
-  url.searchParams.set('a', String(donation.price));
-  url.searchParams.set('m', donation.name.slice(0, 500));
-  return url.toString();
+  const params = new URLSearchParams({
+    g: DONATION_GOAL,
+    a: String(donation.price),
+    m: donation.name.slice(0, 500),
+  });
+  return `${DONATION_PROXY_PATH}?${params}`;
 }
 
 export function buildGiveawayDonateUrl(giveaway) {
-  const url = new URL(DONATION_URL);
-  url.searchParams.set('a', String(giveaway.ticketPriceUah));
-  url.searchParams.set(
-    'm',
-    `Розіграш: ${giveaway.title}`.slice(0, 500)
-  );
-  return url.toString();
+  const params = new URLSearchParams({
+    g: DONATION_GOAL,
+    a: String(giveaway.ticketPriceUah),
+    m: `Розіграш: ${giveaway.title}`.slice(0, 500),
+  });
+  return `${DONATION_PROXY_PATH}?${params}`;
 }

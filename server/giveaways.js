@@ -98,6 +98,7 @@ function publicGiveawayView(giveaway) {
     totalTickets,
     winner: winner ? { id: winner.id, name: winner.name } : null,
     drawnAt: giveaway.drawnAt ?? null,
+    showOnWidget: Boolean(giveaway.showOnWidget),
     createdAt: giveaway.createdAt,
   };
 }
@@ -144,6 +145,7 @@ export function createGiveaway({ title, description, ticketPriceUah, imageFilena
     ticketPriceUah: price,
     status: 'open',
     winnerParticipantId: null,
+    showOnWidget: false,
     createdAt: Date.now(),
     drawnAt: null,
   };
@@ -356,7 +358,23 @@ export function drawWinner(giveawayId) {
   giveaway.status = 'drawn';
   giveaway.winnerParticipantId = winner.id;
   giveaway.drawnAt = Date.now();
+  giveaway.showOnWidget = true;
 
+  saveStore();
+  notify();
+  return getGiveawayAdmin(giveawayId);
+}
+
+export function setGiveawayWidgetDisplay(giveawayId, visible) {
+  const giveaway = findGiveaway(giveawayId);
+  if (!giveaway) {
+    throw new Error(`Невідомий розіграш: ${giveawayId}`);
+  }
+  if (giveaway.status !== 'drawn') {
+    throw new Error('Показувати на віджеті можна лише завершений розіграш');
+  }
+
+  giveaway.showOnWidget = Boolean(visible);
   saveStore();
   notify();
   return getGiveawayAdmin(giveawayId);

@@ -5,6 +5,7 @@ import {
   useCountdown,
   useTimerExpired,
 } from '../hooks/useActiveDebuffs';
+import { useGiveaways } from '../hooks/useGiveaways';
 import { playTimerExpiredSound } from '../utils/timerSound';
 import '../styles/widget.css';
 
@@ -58,10 +59,34 @@ function DebuffOverlay({ item }) {
   );
 }
 
+function GiveawayWinnerOverlay({ giveaway }) {
+  return (
+    <article className="giveaway-winner-overlay">
+      {giveaway.imageUrl && (
+        <img
+          className="giveaway-winner-overlay__image"
+          src={giveaway.imageUrl}
+          alt=""
+        />
+      )}
+      <p className="giveaway-winner-overlay__label">Розіграш</p>
+      <h2 className="giveaway-winner-overlay__title">{giveaway.title}</h2>
+      <p className="giveaway-winner-overlay__winner">
+        🏆 {giveaway.winner.name}
+      </p>
+    </article>
+  );
+}
+
 export default function ObsWidget() {
   const { token } = useParams();
   const { active } = useActiveDebuffs();
+  const { giveaways } = useGiveaways();
   const [valid, setValid] = useState(null);
+
+  const widgetWinners = giveaways.filter(
+    (g) => g.status === 'drawn' && g.winner && g.showOnWidget
+  );
 
   const onTimerExpired = useCallback(() => {
     playTimerExpiredSound();
@@ -97,13 +122,16 @@ export default function ObsWidget() {
     );
   }
 
-  if (active.length === 0) {
+  if (active.length === 0 && widgetWinners.length === 0) {
     return <div className="widget-page widget-empty" />;
   }
 
   return (
     <div className="widget-page">
       <div className="widget-stack">
+        {widgetWinners.map((giveaway) => (
+          <GiveawayWinnerOverlay key={giveaway.id} giveaway={giveaway} />
+        ))}
         {active.map((item) => (
           <DebuffOverlay key={item.id} item={item} />
         ))}

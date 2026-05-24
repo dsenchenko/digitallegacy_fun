@@ -28,11 +28,11 @@ export function useActiveDebuffs() {
     };
   }, []);
 
-  const activate = (donationId, donorName = '', durationMinutes = null) =>
+  const activate = (donationId, donorName = '') =>
     new Promise((resolve, reject) => {
       socket.emit(
         'active:activate',
-        { donationId, donorName, durationMinutes },
+        { donationId, donorName },
         (res) => {
           if (res?.ok) resolve(res.debuff);
           else reject(new Error(res?.error ?? 'Не вдалося активувати'));

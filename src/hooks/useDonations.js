@@ -94,7 +94,7 @@ export function useDonations() {
 }
 
 export function formatDonationMeta(donation) {
-  if (donation.hasTimer) {
+  if (donation.durationMinutes > 0) {
     return `${donation.durationMinutes} хв`;
   }
   return null;

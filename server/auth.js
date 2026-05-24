@@ -44,6 +44,12 @@ function verifyStoredPassword(password, stored) {
   return timingSafeEqual(expected, actual);
 }
 
+export function getAuthSource() {
+  if (process.env.ADMIN_PASSWORD) return 'env';
+  if (readSettings().adminPasswordHash) return 'file';
+  return null;
+}
+
 export function isAuthConfigured() {
   return Boolean(process.env.ADMIN_PASSWORD || readSettings().adminPasswordHash);
 }

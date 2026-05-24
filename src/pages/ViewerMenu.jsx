@@ -1,4 +1,5 @@
 import { useDonations, formatDonationMeta } from '../hooks/useDonations';
+import { useActiveDebuffs, useCountdown } from '../hooks/useActiveDebuffs';
 import { useGiveaways, giveawayStatusLabel } from '../hooks/useGiveaways';
 import { DONATION_URL } from '../config';
 import { buildDonatelloUrl, buildGiveawayDonateUrl } from '../utils/donatelloUrl';
@@ -12,8 +13,35 @@ import {
 import '../styles/menu.css';
 import '../styles/giveaways.css';
 
+function MenuActiveItem({ item }) {
+  const remaining = useCountdown(item.expiresAt);
+
+  return (
+    <li className="menu__active-item">
+      <div className="menu__active-info">
+        <p className="menu__active-name">{item.name}</p>
+        {item.categoryName && (
+          <p className="menu__active-category">{item.categoryName}</p>
+        )}
+        {item.isRandomResult && (
+          <p className="menu__active-random">🎲 Випадковий дебаф</p>
+        )}
+        {item.donorName && (
+          <p className="menu__active-donor">від {item.donorName}</p>
+        )}
+      </div>
+      {item.hasTimer && item.expiresAt ? (
+        <span className="menu__active-timer">{remaining}</span>
+      ) : (
+        <span className="menu__active-timer menu__active-timer--live">Активно</span>
+      )}
+    </li>
+  );
+}
+
 export default function ViewerMenu() {
   const { categories, loading } = useDonations();
+  const { active } = useActiveDebuffs();
   const { giveaways, loading: giveawaysLoading } = useGiveaways();
 
   if (loading) {
@@ -47,6 +75,20 @@ export default function ViewerMenu() {
           Задонатити на Donatello
         </a>
       </header>
+
+      {active.length > 0 && (
+        <section className="menu__section">
+          <h2 className="menu__section-title menu__section-title--red">
+            <span className="menu__section-icon menu__section-icon--red">⏱️</span>
+            Зараз активні ({active.length})
+          </h2>
+          <ul className="menu__active-list">
+            {active.map((item) => (
+              <MenuActiveItem key={item.id} item={item} />
+            ))}
+          </ul>
+        </section>
+      )}
 
       {!giveawaysLoading && giveaways.length > 0 && (
         <section className="menu__section">

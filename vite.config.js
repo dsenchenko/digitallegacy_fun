@@ -7,13 +7,19 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:3456',
+        // Use 127.0.0.1 — on macOS "localhost" often resolves to ::1 first,
+        // but the API server listens on IPv4 only, which breaks auth cookies.
+        target: 'http://127.0.0.1:3456',
         changeOrigin: true,
       },
       '/socket.io': {
-        target: 'http://localhost:3456',
+        target: 'http://127.0.0.1:3456',
         changeOrigin: true,
         ws: true,
+      },
+      '/digitallegacyua': {
+        target: 'http://127.0.0.1:3456',
+        changeOrigin: true,
       },
     },
   },

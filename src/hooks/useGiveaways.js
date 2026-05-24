@@ -96,6 +96,12 @@ export function useGiveawayAdmin(giveawayId) {
   const deleteGiveaway = () =>
     emitGiveaway('giveaways:delete', { giveawayId });
 
+  const setWidgetDisplay = (visible) =>
+    emitGiveaway('giveaways:setWidget', { giveawayId, visible }).then((res) => {
+      setGiveaway(res.giveaway);
+      return res.giveaway;
+    });
+
   return {
     giveaway,
     loading,
@@ -107,6 +113,7 @@ export function useGiveawayAdmin(giveawayId) {
     drawWinner,
     updateGiveaway,
     deleteGiveaway,
+    setWidgetDisplay,
   };
 }
 

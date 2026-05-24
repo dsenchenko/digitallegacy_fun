@@ -6,8 +6,7 @@ export function getRandomDebuffPool(randomDonation) {
     (d) =>
       d.categoryId === categoryId &&
       !d.isRandom &&
-      d.hasTimer &&
-      d.durationMinutes
+      d.durationMinutes > 0
   );
 }
 

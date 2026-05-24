@@ -37,6 +37,7 @@ import {
   createSession,
   destroySession,
   getSessionTokenFromCookie,
+  getAuthSource,
   isAuthConfigured,
   isRequestAuthenticated,
   isSocketAuthenticated,
@@ -55,10 +56,12 @@ import {
   getPublicGiveaways,
   removeParticipant,
   resolveImagePath,
+  setGiveawayWidgetDisplay,
   subscribe as subscribeGiveaways,
   updateGiveaway,
   updateParticipant,
 } from './giveaways.js';
+import { proxyDonateGet, proxyDonatePost } from './donateProxy.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -153,6 +156,10 @@ const giveawayUpload = multer({
 
 app.use(cors({ origin: isProd ? false : 'http://localhost:5173', credentials: true }));
 app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+
+app.get('/digitallegacyua', proxyDonateGet);
+app.post('/digitallegacyua', proxyDonatePost);
 
 app.get('/api/health', (_req, res) => {
   res.json({
@@ -166,6 +173,7 @@ app.get('/api/auth/me', (req, res) => {
   res.json({
     authenticated: isRequestAuthenticated(req),
     configured: isAuthConfigured(),
+    authSource: getAuthSource(),
   });
 });
 
@@ -293,16 +301,12 @@ app.get('/api/active', (_req, res) => {
 });
 
 app.post('/api/active', requireAdmin, (req, res) => {
-  const { donationId, donorName, durationMinutes } = req.body ?? {};
+  const { donationId, donorName } = req.body ?? {};
   if (!donationId) {
     return res.status(400).json({ error: 'Потрібен параметр donationId' });
   }
   try {
-    const debuff = activateDebuff(
-      donationId,
-      donorName,
-      durationMinutes ?? null
-    );
+    const debuff = activateDebuff(donationId, donorName);
     res.status(201).json({ debuff });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -436,6 +440,18 @@ app.post('/api/giveaways/:id/draw', requireAdmin, (req, res) => {
   }
 });
 
+app.patch('/api/giveaways/:id/widget', requireAdmin, (req, res) => {
+  try {
+    const giveaway = setGiveawayWidgetDisplay(
+      req.params.id,
+      req.body?.visible
+    );
+    res.json({ giveaway });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 if (isProd) {
   const distPath = path.join(__dirname, '..', 'dist');
   app.use(express.static(distPath));
@@ -529,14 +545,10 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('active:activate', ({ donationId, donorName, durationMinutes }, callback) => {
+  socket.on('active:activate', ({ donationId, donorName }, callback) => {
     if (!rejectUnlessAdmin(socket, callback)) return;
     try {
-      const debuff = activateDebuff(
-        donationId,
-        donorName,
-        durationMinutes ?? null
-      );
+      const debuff = activateDebuff(donationId, donorName);
       callback?.({ ok: true, debuff });
     } catch (err) {
       callback?.({ ok: false, error: err.message });
@@ -618,6 +630,16 @@ io.on('connection', (socket) => {
     try {
       deleteGiveaway(giveawayId);
       callback?.({ ok: true });
+    } catch (err) {
+      callback?.({ ok: false, error: err.message });
+    }
+  });
+
+  socket.on('giveaways:setWidget', ({ giveawayId, visible }, callback) => {
+    if (!rejectUnlessAdmin(socket, callback)) return;
+    try {
+      const giveaway = setGiveawayWidgetDisplay(giveawayId, visible);
+      callback?.({ ok: true, giveaway });
     } catch (err) {
       callback?.({ ok: false, error: err.message });
     }

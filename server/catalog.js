@@ -99,11 +99,27 @@ function applyDonationOverrides(donation) {
   const durationMinutes =
     customizations.durationOverrides[donation.id] ?? donation.durationMinutes;
   const name = customizations.nameOverrides[donation.id] ?? donation.name;
-  return {
+  return normalizeDonation({
     ...donation,
     name,
     price,
     durationMinutes,
+  });
+}
+
+function normalizeDonation(donation) {
+  let durationMinutes = donation.durationMinutes;
+  if (durationMinutes === null || durationMinutes === undefined) {
+    durationMinutes = donation.hasTimer ? 10 : 0;
+  }
+  durationMinutes = Number(durationMinutes);
+  if (!Number.isFinite(durationMinutes) || durationMinutes < 0) {
+    durationMinutes = 0;
+  }
+  return {
+    ...donation,
+    durationMinutes,
+    hasTimer: durationMinutes > 0,
   };
 }
 
@@ -167,20 +183,26 @@ function validateDonationInput(input, { partial = false } = {}) {
     result.price = price;
   }
 
-  if (!partial || input.hasTimer !== undefined) {
-    result.hasTimer = Boolean(input.hasTimer);
-  }
-
-  if (!partial || input.durationMinutes !== undefined) {
-    if (input.durationMinutes === null || input.durationMinutes === '') {
-      result.durationMinutes = null;
-    } else {
-      const duration = Number(input.durationMinutes);
-      if (!Number.isInteger(duration) || duration <= 0) {
-        throw new Error('Тривалість має бути цілим числом більше 0');
+  if (!partial || input.durationMinutes !== undefined || input.hasTimer !== undefined) {
+    let duration;
+    if (input.durationMinutes !== undefined) {
+      if (input.durationMinutes === null || input.durationMinutes === '') {
+        duration = 0;
+      } else {
+        duration = Number(input.durationMinutes);
       }
-      result.durationMinutes = duration;
+    } else if (input.hasTimer !== undefined) {
+      duration = input.hasTimer ? Number(input.durationMinutes ?? 10) : 0;
+    } else {
+      duration = 0;
     }
+
+    if (!Number.isInteger(duration) || duration < 0) {
+      throw new Error('Тривалість має бути цілим числом від 0');
+    }
+
+    result.durationMinutes = duration;
+    result.hasTimer = duration > 0;
   }
 
   if (input.description !== undefined) {
@@ -275,19 +297,19 @@ export function updateDuration(donationId, durationMinutes) {
   if (!donation) {
     throw new Error(`Невідомий донат: ${donationId}`);
   }
-  if (!donation.hasTimer) {
-    throw new Error('Цей донат не має таймера');
-  }
 
   const parsed = Number(durationMinutes);
-  if (!Number.isInteger(parsed) || parsed <= 0) {
-    throw new Error('Тривалість має бути цілим числом більше 0');
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    throw new Error('Тривалість має бути цілим числом від 0');
   }
 
   const baseDonation = findBaseDonation(donationId);
-  const defaultDuration = baseDonation?.durationMinutes ?? parsed;
+  const defaultDuration = baseDonation
+    ? normalizeDonation(baseDonation).durationMinutes
+    : parsed;
 
   if (updateCustomDonationField(donationId, 'durationMinutes', parsed)) {
+    updateCustomDonationField(donationId, 'hasTimer', parsed > 0);
     saveCustomizations();
     notify();
     return getDonationById(donationId);
@@ -399,14 +421,8 @@ export function addDonation(categoryId, input) {
   }
 
   const validated = validateDonationInput(input);
-  const hasTimer = validated.hasTimer ?? false;
-  const durationMinutes = hasTimer
-    ? validated.durationMinutes ?? 10
-    : null;
-
-  if (hasTimer && !durationMinutes) {
-    throw new Error('Для таймера потрібна тривалість у хвилинах');
-  }
+  const durationMinutes = validated.durationMinutes ?? 0;
+  const hasTimer = durationMinutes > 0;
 
   const donation = {
     id: `don-${uuidv4().slice(0, 8)}`,
