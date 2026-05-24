@@ -11,3 +11,13 @@ export function buildDonatelloUrl(donation) {
   url.searchParams.set('m', donation.name.slice(0, 500));
   return url.toString();
 }
+
+export function buildGiveawayDonateUrl(giveaway) {
+  const url = new URL(DONATION_URL);
+  url.searchParams.set('a', String(giveaway.ticketPriceUah));
+  url.searchParams.set(
+    'm',
+    `Розіграш: ${giveaway.title}`.slice(0, 500)
+  );
+  return url.toString();
+}

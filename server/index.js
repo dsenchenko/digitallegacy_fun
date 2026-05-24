@@ -5,6 +5,8 @@ import cors from 'cors';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import multer from 'multer';
+import { v4 as uuidv4 } from 'uuid';
 import {
   addCategory,
   addDonation,
@@ -43,6 +45,20 @@ import {
   setAdminPassword,
   setSessionCookie,
 } from './auth.js';
+import {
+  GIVEAWAY_IMAGES_DIR,
+  addParticipant,
+  createGiveaway,
+  deleteGiveaway,
+  drawWinner,
+  getGiveawayAdmin,
+  getPublicGiveaways,
+  removeParticipant,
+  resolveImagePath,
+  subscribe as subscribeGiveaways,
+  updateGiveaway,
+  updateParticipant,
+} from './giveaways.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -105,6 +121,36 @@ function rejectUnlessAdmin(socket, callback) {
   return true;
 }
 
+function isSecureRequest(req) {
+  if (req.secure) return true;
+  const forwarded = req.headers['x-forwarded-proto'];
+  if (typeof forwarded === 'string') {
+    return forwarded.split(',')[0].trim() === 'https';
+  }
+  return false;
+}
+
+function useSecureCookie(req) {
+  return isProd && isSecureRequest(req);
+}
+
+fs.mkdirSync(GIVEAWAY_IMAGES_DIR, { recursive: true });
+
+const giveawayUpload = multer({
+  storage: multer.diskStorage({
+    destination: GIVEAWAY_IMAGES_DIR,
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+      cb(null, `${uuidv4().slice(0, 12)}${ext}`);
+    },
+  }),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) cb(null, true);
+    else cb(new Error('Дозволені лише зображення'));
+  },
+});
+
 app.use(cors({ origin: isProd ? false : 'http://localhost:5173', credentials: true }));
 app.use(express.json({ limit: '1mb' }));
 
@@ -126,7 +172,7 @@ app.get('/api/auth/me', (req, res) => {
 app.post('/api/auth/login', (req, res) => {
   try {
     const token = login(req.body?.password);
-    setSessionCookie(res, token, { secure: isProd });
+    setSessionCookie(res, token, { secure: useSecureCookie(req) });
     res.json({ ok: true });
   } catch (err) {
     res.status(401).json({ error: err.message });
@@ -136,7 +182,7 @@ app.post('/api/auth/login', (req, res) => {
 app.post('/api/auth/logout', (req, res) => {
   const token = getSessionTokenFromCookie(req.headers.cookie);
   destroySession(token);
-  clearSessionCookie(res, { secure: isProd });
+  clearSessionCookie(res, { secure: useSecureCookie(req) });
   res.json({ ok: true });
 });
 
@@ -147,7 +193,7 @@ app.post('/api/auth/setup', (req, res) => {
   try {
     setAdminPassword(req.body?.password);
     const token = createSession();
-    setSessionCookie(res, token, { secure: isProd });
+    setSessionCookie(res, token, { secure: useSecureCookie(req) });
     res.json({ ok: true });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -289,6 +335,107 @@ app.post('/api/widget/regenerate', requireAdmin, (_req, res) => {
   res.json({ token, path: `/widget/${token}` });
 });
 
+app.get('/api/giveaways', (_req, res) => {
+  res.json({ giveaways: getPublicGiveaways() });
+});
+
+app.get('/api/giveaways/images/:filename', (req, res) => {
+  try {
+    res.sendFile(resolveImagePath(req.params.filename));
+  } catch (err) {
+    res.status(404).json({ error: err.message });
+  }
+});
+
+app.get('/api/giveaways/:id', requireAdmin, (req, res) => {
+  try {
+    res.json({ giveaway: getGiveawayAdmin(req.params.id) });
+  } catch (err) {
+    res.status(404).json({ error: err.message });
+  }
+});
+
+app.post(
+  '/api/giveaways',
+  requireAdmin,
+  giveawayUpload.single('image'),
+  (req, res) => {
+    try {
+      const giveaway = createGiveaway({
+        title: req.body?.title,
+        description: req.body?.description,
+        ticketPriceUah: req.body?.ticketPriceUah,
+        imageFilename: req.file?.filename ?? null,
+      });
+      res.status(201).json({ giveaway });
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  }
+);
+
+app.patch('/api/giveaways/:id', requireAdmin, (req, res) => {
+  try {
+    const giveaway = updateGiveaway(req.params.id, req.body ?? {});
+    res.json({ giveaway });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.delete('/api/giveaways/:id', requireAdmin, (req, res) => {
+  try {
+    deleteGiveaway(req.params.id);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.post('/api/giveaways/:id/participants', requireAdmin, (req, res) => {
+  try {
+    const participant = addParticipant(req.params.id, req.body ?? {});
+    res.status(201).json({ participant });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.patch('/api/giveaways/:id/participants/:participantId', requireAdmin, (req, res) => {
+  try {
+    const participant = updateParticipant(
+      req.params.id,
+      req.params.participantId,
+      req.body ?? {}
+    );
+    res.json({ participant });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.delete(
+  '/api/giveaways/:id/participants/:participantId',
+  requireAdmin,
+  (req, res) => {
+    try {
+      removeParticipant(req.params.id, req.params.participantId);
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  }
+);
+
+app.post('/api/giveaways/:id/draw', requireAdmin, (req, res) => {
+  try {
+    const giveaway = drawWinner(req.params.id);
+    res.json({ giveaway });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 if (isProd) {
   const distPath = path.join(__dirname, '..', 'dist');
   app.use(express.static(distPath));
@@ -300,6 +447,7 @@ if (isProd) {
 io.on('connection', (socket) => {
   socket.emit('active:update', getActiveDebuffs());
   socket.emit('donations:update', getCategories());
+  socket.emit('giveaways:update', getPublicGiveaways());
 
   socket.on('donations:updatePrice', ({ donationId, price }, callback) => {
     if (!rejectUnlessAdmin(socket, callback)) return;
@@ -406,6 +554,74 @@ io.on('connection', (socket) => {
     clearAllDebuffs();
     callback?.({ ok: true });
   });
+
+  socket.on('giveaways:addParticipant', ({ giveawayId, ...payload }, callback) => {
+    if (!rejectUnlessAdmin(socket, callback)) return;
+    try {
+      const participant = addParticipant(giveawayId, payload);
+      callback?.({ ok: true, participant });
+    } catch (err) {
+      callback?.({ ok: false, error: err.message });
+    }
+  });
+
+  socket.on(
+    'giveaways:updateParticipant',
+    ({ giveawayId, participantId, ...fields },
+    callback
+  ) => {
+    if (!rejectUnlessAdmin(socket, callback)) return;
+    try {
+      const participant = updateParticipant(giveawayId, participantId, fields);
+      callback?.({ ok: true, participant });
+    } catch (err) {
+      callback?.({ ok: false, error: err.message });
+    }
+  });
+
+  socket.on(
+    'giveaways:removeParticipant',
+    ({ giveawayId, participantId },
+    callback
+  ) => {
+    if (!rejectUnlessAdmin(socket, callback)) return;
+    try {
+      removeParticipant(giveawayId, participantId);
+      callback?.({ ok: true });
+    } catch (err) {
+      callback?.({ ok: false, error: err.message });
+    }
+  });
+
+  socket.on('giveaways:draw', ({ giveawayId }, callback) => {
+    if (!rejectUnlessAdmin(socket, callback)) return;
+    try {
+      const giveaway = drawWinner(giveawayId);
+      callback?.({ ok: true, giveaway });
+    } catch (err) {
+      callback?.({ ok: false, error: err.message });
+    }
+  });
+
+  socket.on('giveaways:update', ({ giveawayId, ...fields }, callback) => {
+    if (!rejectUnlessAdmin(socket, callback)) return;
+    try {
+      const giveaway = updateGiveaway(giveawayId, fields);
+      callback?.({ ok: true, giveaway });
+    } catch (err) {
+      callback?.({ ok: false, error: err.message });
+    }
+  });
+
+  socket.on('giveaways:delete', ({ giveawayId }, callback) => {
+    if (!rejectUnlessAdmin(socket, callback)) return;
+    try {
+      deleteGiveaway(giveawayId);
+      callback?.({ ok: true });
+    } catch (err) {
+      callback?.({ ok: false, error: err.message });
+    }
+  });
 });
 
 subscribe((active) => {
@@ -418,6 +634,10 @@ subscribeExpired((expired) => {
 
 subscribeCatalog((categories) => {
   io.emit('donations:update', categories);
+});
+
+subscribeGiveaways((giveaways) => {
+  io.emit('giveaways:update', giveaways);
 });
 
 httpServer.listen(PORT, HOST, () => {

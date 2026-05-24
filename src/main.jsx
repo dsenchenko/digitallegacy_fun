@@ -11,7 +11,7 @@ createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
       <Routes>
-        <Route path="/admin" element={<AdminGate />} />
+        <Route path="/admin/*" element={<AdminGate />} />
         <Route path="/menu" element={<ViewerMenu />} />
         <Route path="/widget/:token" element={<ObsWidget />} />
         <Route path="/widget" element={<WidgetRedirect />} />

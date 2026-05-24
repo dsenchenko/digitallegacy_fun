@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useDonations, formatDonationMeta } from '../hooks/useDonations';
 import { useAuth } from '../hooks/useAuth';
@@ -657,6 +658,9 @@ export default function AdminPanel() {
           </p>
         </div>
         <div className="admin__header-right">
+          <Link className="admin__nav-link" to="/admin/giveaways">
+            Розіграші
+          </Link>
           <a
             className="admin__nav-link"
             href="/menu"

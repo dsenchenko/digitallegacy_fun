@@ -1,6 +1,8 @@
+import { Routes, Route } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import AdminLogin from './AdminLogin';
 import AdminPanel from './AdminPanel';
+import AdminGiveaways from './AdminGiveaways';
 import '../styles/admin.css';
 
 export default function AdminGate() {
@@ -22,5 +24,10 @@ export default function AdminGate() {
     return <AdminLogin onLogin={login} />;
   }
 
-  return <AdminPanel />;
+  return (
+    <Routes>
+      <Route index element={<AdminPanel />} />
+      <Route path="giveaways" element={<AdminGiveaways />} />
+    </Routes>
+  );
 }
