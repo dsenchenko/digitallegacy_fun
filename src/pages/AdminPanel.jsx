@@ -1,11 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useDonations, formatDonationMeta } from '../hooks/useDonations';
 import { useWidgetUrl } from '../hooks/useWidgetUrl';
 import { useActiveDebuffs, useCountdown } from '../hooks/useActiveDebuffs';
+import { useCategoryCollapse } from '../hooks/useCategoryCollapse';
 import '../styles/admin.css';
 
-function ActiveItem({ item, onStop, paused, pausedAt }) {
+function ActiveItem({ item, onStop, onAdjustTime, paused, pausedAt }) {
   const remaining = useCountdown(item.expiresAt, undefined, { paused, pausedAt });
+  const hasTimer = item.hasTimer && item.expiresAt;
+
+  const handleAdjust = (deltaSeconds) => {
+    onAdjustTime(item.id, deltaSeconds);
+  };
 
   return (
     <li className={`active-item${paused ? ' active-item--paused' : ''}`}>
@@ -19,11 +25,31 @@ function ActiveItem({ item, onStop, paused, pausedAt }) {
         )}
       </div>
       <div className="active-item__right">
-        {item.hasTimer && item.expiresAt ? (
-          <span className="active-item__timer">
-            {paused ? '⏸ ' : ''}
-            {remaining}
-          </span>
+        {hasTimer ? (
+          <div className="active-item__time-controls">
+            <button
+              type="button"
+              className="active-item__skip"
+              onClick={() => handleAdjust(-LIVE_SKIP_SECONDS)}
+              title="Зменшити на 30 секунд"
+              aria-label="Зменшити на 30 секунд"
+            >
+              −30 с
+            </button>
+            <span className="active-item__timer" aria-live="polite">
+              {paused ? '⏸ ' : ''}
+              {remaining}
+            </span>
+            <button
+              type="button"
+              className="active-item__skip"
+              onClick={() => handleAdjust(LIVE_SKIP_SECONDS)}
+              title="Додати 30 секунд"
+              aria-label="Додати 30 секунд"
+            >
+              +30 с
+            </button>
+          </div>
         ) : (
           <span className="active-item__timer active-item__timer--infinite">
             Активно
@@ -42,13 +68,18 @@ function ActiveItem({ item, onStop, paused, pausedAt }) {
 }
 
 const LIVE_SKIP_SECONDS = 30;
-const LIVE_SKIP_MINUTES = 60;
 
 function getActiveDebuffForDonation(donationId, active) {
   return active.find((item) => item.donationId === donationId) ?? null;
 }
 
-function DonationCardLiveOverlay({ activeItem, paused, pausedAt, onAdjustTime }) {
+function DonationCardLiveOverlay({
+  activeItem,
+  paused,
+  pausedAt,
+  onAdjustTime,
+  onStop,
+}) {
   const remaining = useCountdown(activeItem.expiresAt, undefined, {
     paused,
     pausedAt,
@@ -61,26 +92,19 @@ function DonationCardLiveOverlay({ activeItem, paused, pausedAt, onAdjustTime })
 
   return (
     <div className="donation-card__live-overlay">
-      {hasTimer ? (
-        <div className="donation-card__live-controls">
-          <button
-            type="button"
-            className="donation-card__live-skip"
-            onClick={() => handleAdjust(-LIVE_SKIP_MINUTES)}
-            title="Зменшити на 1 хвилину"
-            aria-label="Зменшити на 1 хвилину"
-          >
-            −1 хв
-          </button>
-          <button
-            type="button"
-            className="donation-card__live-skip donation-card__live-skip--fine"
-            onClick={() => handleAdjust(-LIVE_SKIP_SECONDS)}
-            title="Зменшити на 30 секунд"
-            aria-label="Зменшити на 30 секунд"
-          >
-            −30 с
-          </button>
+      <div className="donation-card__live-head">
+        <p className="donation-card__live-title">{activeItem.name}</p>
+        <div className="donation-card__live-meta-slot">
+          {activeItem.isRandomResult && (
+            <p className="donation-card__live-meta">🎲 Випадковий дебаф</p>
+          )}
+          {activeItem.donorName && (
+            <p className="donation-card__live-meta">від {activeItem.donorName}</p>
+          )}
+        </div>
+      </div>
+      <div className="donation-card__live-center">
+        {hasTimer ? (
           <div className="donation-card__live-timer" aria-live="polite">
             {paused && (
               <span className="donation-card__live-paused" aria-hidden="true">
@@ -89,30 +113,45 @@ function DonationCardLiveOverlay({ activeItem, paused, pausedAt, onAdjustTime })
             )}
             {remaining}
           </div>
+        ) : (
+          <p className="donation-card__live-timer donation-card__live-timer--infinite">
+            Активно
+          </p>
+        )}
+      </div>
+      <div className="donation-card__live-foot">
+        <div className="donation-card__live-actions">
+          {hasTimer && (
+            <button
+              type="button"
+              className="donation-card__live-skip"
+              onClick={() => handleAdjust(-LIVE_SKIP_SECONDS)}
+              title="Зменшити на 30 секунд"
+              aria-label="Зменшити на 30 секунд"
+            >
+              −30 с
+            </button>
+          )}
           <button
             type="button"
-            className="donation-card__live-skip donation-card__live-skip--fine"
-            onClick={() => handleAdjust(LIVE_SKIP_SECONDS)}
-            title="Додати 30 секунд"
-            aria-label="Додати 30 секунд"
-          >
-            +30 с
-          </button>
-          <button
-            type="button"
-            className="donation-card__live-skip"
-            onClick={() => handleAdjust(LIVE_SKIP_MINUTES)}
-            title="Додати 1 хвилину"
-            aria-label="Додати 1 хвилину"
-          >
-            +1 хв
-          </button>
+            className="donation-card__live-stop"
+            onClick={() => onStop(activeItem.id)}
+            aria-label="Зупинити"
+            title="Зупинити"
+          />
+          {hasTimer && (
+            <button
+              type="button"
+              className="donation-card__live-skip"
+              onClick={() => handleAdjust(LIVE_SKIP_SECONDS)}
+              title="Додати 30 секунд"
+              aria-label="Додати 30 секунд"
+            >
+              +30 с
+            </button>
+          )}
         </div>
-      ) : (
-        <p className="donation-card__live-timer donation-card__live-timer--infinite">
-          Активно
-        </p>
-      )}
+      </div>
     </div>
   );
 }
@@ -124,6 +163,7 @@ function DonationCard({
   pausedAt,
   onActivate,
   onAdjustTime,
+  onStop,
   onUpdateName,
   onUpdatePrice,
   onUpdateDuration,
@@ -310,6 +350,7 @@ function DonationCard({
           paused={paused}
           pausedAt={pausedAt}
           onAdjustTime={onAdjustTime}
+          onStop={onStop}
         />
       )}
 
@@ -326,8 +367,7 @@ function DonationCard({
   );
 }
 
-function AddDonationForm({ categoryId, onAdd, busy }) {
-  const [open, setOpen] = useState(false);
+function AddDonationForm({ categoryId, onAdd, busy, onClose }) {
   const [name, setName] = useState('');
   const [price, setPrice] = useState('100');
   const [durationMinutes, setDurationMinutes] = useState('10');
@@ -338,7 +378,7 @@ function AddDonationForm({ categoryId, onAdd, busy }) {
     setPrice('100');
     setDurationMinutes('10');
     setDescription('');
-    setOpen(false);
+    onClose();
   };
 
   const handleSubmit = async (event) => {
@@ -352,20 +392,8 @@ function AddDonationForm({ categoryId, onAdd, busy }) {
     reset();
   };
 
-  if (!open) {
-    return (
-      <button
-        type="button"
-        className="catalog-btn catalog-btn--ghost"
-        onClick={() => setOpen(true)}
-      >
-        + Додати донат
-      </button>
-    );
-  }
-
   return (
-    <form className="catalog-form" onSubmit={handleSubmit}>
+    <form className="catalog-form catalog-form--category-add" onSubmit={handleSubmit}>
       <h3 className="catalog-form__title">Новий донат</h3>
       <label className="catalog-form__field">
         Назва
@@ -426,10 +454,14 @@ function AddDonationForm({ categoryId, onAdd, busy }) {
 
 function CategorySection({
   category,
+  expanded,
+  onToggle,
+  onEnsureExpanded,
   activeDebuffs,
   paused,
   pausedAt,
   onAdjustTime,
+  onStop,
   busyId,
   savingNameId,
   savingPriceId,
@@ -449,10 +481,16 @@ function CategorySection({
   onAddDonation,
 }) {
   const [nameInput, setNameInput] = useState(category.name);
+  const [addFormOpen, setAddFormOpen] = useState(false);
 
   useEffect(() => {
     setNameInput(category.name);
   }, [category.name]);
+
+  const handleOpenAdd = () => {
+    onEnsureExpanded();
+    setAddFormOpen(true);
+  };
 
   const handleBlurCategoryName = async () => {
     const trimmed = nameInput.trim();
@@ -479,10 +517,26 @@ function CategorySection({
   };
 
   return (
-    <section className="admin__section">
+    <section
+      className={`admin__section category-section${expanded ? '' : ' category-section--collapsed'}`}
+    >
       <div className="category-header">
+        <button
+          type="button"
+          className="category-header__toggle"
+          onClick={onToggle}
+          aria-expanded={expanded}
+          aria-label={
+            expanded ? 'Згорнути категорію' : 'Розгорнути категорію'
+          }
+        >
+          <span
+            className={`category-header__chevron${expanded ? ' category-header__chevron--open' : ''}`}
+            aria-hidden="true"
+          />
+        </button>
         <label className="category-header__field">
-          Категорія
+          <span className="category-header__label">Категорія</span>
           <input
             className="category-header__input"
             value={nameInput}
@@ -491,44 +545,63 @@ function CategorySection({
             disabled={savingCategoryId === category.id}
           />
         </label>
-        {canDeleteCategory && (
-          <button
-            type="button"
-            className="catalog-btn catalog-btn--small catalog-btn--danger"
-            disabled={deletingCategoryId === category.id}
-            onClick={handleDeleteCategory}
-          >
-            {deletingCategoryId === category.id ? '...' : 'Видалити категорію'}
-          </button>
-        )}
+        <div className="category-header__actions">
+          {!addFormOpen && (
+            <button
+              type="button"
+              className="catalog-btn catalog-btn--ghost category-header__add-btn"
+              onClick={handleOpenAdd}
+            >
+              + Додати донат
+            </button>
+          )}
+          {canDeleteCategory && (
+            <button
+              type="button"
+              className="catalog-btn catalog-btn--small catalog-btn--danger"
+              disabled={deletingCategoryId === category.id}
+              onClick={handleDeleteCategory}
+            >
+              {deletingCategoryId === category.id ? '...' : 'Видалити категорію'}
+            </button>
+          )}
+        </div>
       </div>
-      <div className="admin__grid">
-        {category.donations.map((donation) => (
-          <DonationCard
-            key={donation.id}
-            donation={donation}
-            activeDebuffs={activeDebuffs}
-            paused={paused}
-            pausedAt={pausedAt}
-            onAdjustTime={onAdjustTime}
-            busy={busyId === donation.id}
-            savingName={savingNameId === donation.id}
-            savingPrice={savingPriceId === donation.id}
-            savingDuration={savingDurationId === donation.id}
-            deleting={deletingDonationId === donation.id}
-            onActivate={onActivate}
-            onUpdateName={onUpdateName}
-            onUpdatePrice={onUpdatePrice}
-            onUpdateDuration={onUpdateDuration}
-            onDelete={onDeleteDonation}
-          />
-        ))}
-      </div>
-      <AddDonationForm
-        categoryId={category.id}
-        busy={addingDonationCategoryId === category.id}
-        onAdd={onAddDonation}
-      />
+      {expanded && (
+        <div className="category-section__body">
+          <div className="admin__grid">
+            {category.donations.map((donation) => (
+              <DonationCard
+                key={donation.id}
+                donation={donation}
+                activeDebuffs={activeDebuffs}
+                paused={paused}
+                pausedAt={pausedAt}
+                onAdjustTime={onAdjustTime}
+                onStop={onStop}
+                busy={busyId === donation.id}
+                savingName={savingNameId === donation.id}
+                savingPrice={savingPriceId === donation.id}
+                savingDuration={savingDurationId === donation.id}
+                deleting={deletingDonationId === donation.id}
+                onActivate={onActivate}
+                onUpdateName={onUpdateName}
+                onUpdatePrice={onUpdatePrice}
+                onUpdateDuration={onUpdateDuration}
+                onDelete={onDeleteDonation}
+              />
+            ))}
+          </div>
+          {addFormOpen && (
+            <AddDonationForm
+              categoryId={category.id}
+              busy={addingDonationCategoryId === category.id}
+              onAdd={onAddDonation}
+              onClose={() => setAddFormOpen(false)}
+            />
+          )}
+        </div>
+      )}
     </section>
   );
 }
@@ -588,6 +661,11 @@ export default function AdminPanel() {
     deleteCategory,
   } = useDonations();
   const { widgetUrl, loading: widgetLoading, regenerate } = useWidgetUrl();
+  const categoryIds = useMemo(
+    () => categories.map((category) => category.id),
+    [categories]
+  );
+  const { isExpanded, toggle, expand } = useCategoryCollapse(categoryIds);
   const [busyId, setBusyId] = useState(null);
   const [savingPriceId, setSavingPriceId] = useState(null);
   const [savingNameId, setSavingNameId] = useState(null);
@@ -798,6 +876,7 @@ export default function AdminPanel() {
                 paused={paused}
                 pausedAt={pausedAt}
                 onStop={(id) => deactivate(id)}
+                onAdjustTime={handleAdjustTime}
               />
             ))}
           </ul>
@@ -810,10 +889,14 @@ export default function AdminPanel() {
         <CategorySection
           key={category.id}
           category={category}
+          expanded={isExpanded(category.id)}
+          onToggle={() => toggle(category.id)}
+          onEnsureExpanded={() => expand(category.id)}
           activeDebuffs={active}
           paused={paused}
           pausedAt={pausedAt}
           onAdjustTime={handleAdjustTime}
+          onStop={(id) => deactivate(id)}
           busyId={busyId}
           savingNameId={savingNameId}
           savingPriceId={savingPriceId}

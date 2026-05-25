@@ -36,17 +36,15 @@
 /* Intro + author portrait */
 
 .home__intro {
+  display: flex;
+  align-items: stretch;
+  gap: 1.25rem;
   margin-bottom: 2rem;
-  overflow: hidden;
-}
-
-.home__intro::after {
-  content: '';
-  display: table;
-  clear: both;
 }
 
 .home__lead {
+  flex: 1;
+  min-width: 0;
   margin: 0;
 }
 
@@ -60,26 +58,25 @@
   margin-bottom: 2rem;
 }
 
-/* Mirrored intro: images left, text right */
+/* Image left, text right */
 
 .home__section--mirror {
-  overflow: hidden;
-}
-
-.home__section--mirror::after {
-  content: '';
-  display: table;
-  clear: both;
+  display: flex;
+  align-items: stretch;
+  gap: 1.25rem;
 }
 
 .home__section--mirror > p {
+  flex: 1;
+  min-width: 0;
   margin: 0;
 }
 
-/* Figures (smaller, in-flow) */
+/* Figures */
 
 .home__figure {
-  margin: 0 0 1.25rem;
+  flex-shrink: 0;
+  margin: 0;
   padding: 0;
   border-radius: 10px;
   overflow: hidden;
@@ -91,33 +88,44 @@
 .home__figure img {
   display: block;
   width: 100%;
-  height: auto;
-  vertical-align: middle;
+  height: 100%;
+  object-fit: cover;
 }
 
 .home__figure--portrait {
-  float: right;
+  flex: 0 0 min(9.5rem, 34%);
   width: min(9.5rem, 34%);
-  margin: 0 0 1rem 1.25rem;
+  max-width: 9.5rem;
 }
 
 .home__figure--portrait img {
-  aspect-ratio: 9 / 16;
+  object-position: center 18%;
+}
+
+.home__figure--landscape {
+  flex: 0 0 min(46%, 18rem);
+  width: min(46%, 18rem);
+  max-width: 18rem;
+}
+
+.home__section--mirror .home__figure--landscape img {
+  aspect-ratio: 4 / 3;
   object-fit: cover;
 }
 
-.home__section--mirror .home__figure--pov {
-  float: left;
-  width: min(10.5rem, 36%);
-  margin: 0 1.25rem 0.75rem 0;
+.home__figure--brand {
+  flex: 0 0 min(6.5rem, 22%);
+  width: min(6.5rem, 22%);
+  max-width: 6.5rem;
+  align-self: center;
+  background: #000;
 }
 
-.home__section--mirror .home__figure--pov img {
-  aspect-ratio: 3 / 4;
-  object-fit: cover;
+.home__figure--brand img {
+  object-fit: contain;
 }
 
-/* Military fundraising — callout block */
+/* Military fundraising — callout + stream POV */
 
 .home__callout {
   margin: 0 0 2rem;
@@ -132,11 +140,34 @@
   );
 }
 
+.home__callout--with-media {
+  display: flex;
+  align-items: stretch;
+  gap: 1.25rem;
+  padding: 1.1rem 1.2rem;
+}
+
+.home__callout--with-media .home__figure--portrait {
+  flex: 0 0 min(8.75rem, 30%);
+  width: min(8.75rem, 30%);
+  max-width: 8.75rem;
+  border-color: rgba(52, 211, 153, 0.35);
+}
+
+.home__callout--with-media .home__figure--portrait img {
+  object-position: center center;
+}
+
+.home__callout-body {
+  flex: 1;
+  min-width: 0;
+}
+
 .home__callout p {
   margin: 0;
 }
 
-.home__callout p + p {
+.home__callout-body p + p {
   margin-top: 0.75rem;
 }
 
@@ -169,7 +200,7 @@
   color: var(--dl-text-muted);
 }
 
-/* Closing + social links */
+/* Closing + social links + brand */
 
 .home__outro {
   padding: 1.15rem 1.2rem;
@@ -178,7 +209,15 @@
   background: var(--dl-bg-panel);
 }
 
-.home__outro p {
+.home__outro--with-media {
+  display: flex;
+  align-items: stretch;
+  gap: 1.25rem;
+}
+
+.home__outro--with-media > p {
+  flex: 1;
+  min-width: 0;
   margin: 0;
 }
 
@@ -201,20 +240,42 @@
     font-size: 1rem;
   }
 
-  .home__figure--portrait {
-    float: none;
-    width: min(12rem, 72%);
-    margin-left: auto;
-    margin-right: auto;
+  .home__intro,
+  .home__section--mirror,
+  .home__callout--with-media,
+  .home__outro--with-media {
+    flex-direction: column;
+    align-items: center;
   }
 
-  .home__section--mirror .home__figure--pov {
-    float: none;
-    width: min(12rem, 72%);
-    margin: 0 auto 1.15rem;
+  .home__figure--portrait,
+  .home__figure--landscape {
+    flex: none;
+    width: min(12rem, 78%);
+    max-width: none;
   }
 
-  .home__section--mirror > p {
-    margin-bottom: 0;
+  .home__figure--brand {
+    flex: none;
+    width: min(8rem, 52%);
+    max-width: 8rem;
+  }
+
+  .home__section--mirror .home__figure--landscape {
+    width: 100%;
+  }
+
+  .home__figure--landscape img {
+    height: auto;
+    aspect-ratio: 4 / 3;
+  }
+
+  .home__figure--portrait img {
+    height: auto;
+    aspect-ratio: 3 / 4;
+  }
+
+  .home__callout--with-media {
+    padding: 1rem;
   }
 }
