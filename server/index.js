@@ -21,9 +21,12 @@ import {
 } from './catalog.js';
 import {
   activateDebuff,
+  adjustDebuffTime,
   clearAllDebuffs,
   deactivateDebuff,
   getActiveDebuffs,
+  getActiveState,
+  setActivePaused,
   subscribe,
   subscribeExpired,
 } from './state.js';
@@ -297,7 +300,7 @@ app.post('/api/categories/:id/donations', requireAdmin, (req, res) => {
 });
 
 app.get('/api/active', (_req, res) => {
-  res.json({ active: getActiveDebuffs() });
+  res.json(getActiveState());
 });
 
 app.post('/api/active', requireAdmin, (req, res) => {
@@ -326,6 +329,25 @@ app.delete('/api/active', requireAdmin, (_req, res) => {
   res.json({ ok: true });
 });
 
+app.post('/api/active/pause', requireAdmin, (req, res) => {
+  const shouldPause = req.body?.paused !== false;
+  const ok = setActivePaused(shouldPause);
+  res.json({ ok, ...getActiveState() });
+});
+
+app.patch('/api/active/:id/time', requireAdmin, (req, res) => {
+  const { deltaSeconds } = req.body ?? {};
+  if (deltaSeconds === undefined) {
+    return res.status(400).json({ error: 'Потрібен параметр deltaSeconds' });
+  }
+  try {
+    const debuff = adjustDebuffTime(req.params.id, deltaSeconds);
+    res.json({ debuff });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
 app.get('/api/widget', requireAdmin, (_req, res) => {
   res.json(getWidgetInfo());
 });
@@ -336,7 +358,7 @@ app.get('/api/widget/validate/:token', (req, res) => {
 
 app.post('/api/widget/regenerate', requireAdmin, (_req, res) => {
   const token = regenerateWidgetToken();
-  res.json({ token, path: `/widget/${token}` });
+  res.json({ token, path: `/widgets/${token}` });
 });
 
 app.get('/api/giveaways', (_req, res) => {
@@ -461,7 +483,7 @@ if (isProd) {
 }
 
 io.on('connection', (socket) => {
-  socket.emit('active:update', getActiveDebuffs());
+  socket.emit('active:update', getActiveState());
   socket.emit('donations:update', getCategories());
   socket.emit('giveaways:update', getPublicGiveaways());
 
@@ -567,6 +589,22 @@ io.on('connection', (socket) => {
     callback?.({ ok: true });
   });
 
+  socket.on('active:setPaused', ({ paused: shouldPause }, callback) => {
+    if (!rejectUnlessAdmin(socket, callback)) return;
+    const ok = setActivePaused(Boolean(shouldPause));
+    callback?.({ ok, ...getActiveState() });
+  });
+
+  socket.on('active:adjustTime', ({ id, deltaSeconds }, callback) => {
+    if (!rejectUnlessAdmin(socket, callback)) return;
+    try {
+      const debuff = adjustDebuffTime(id, deltaSeconds);
+      callback?.({ ok: true, debuff });
+    } catch (err) {
+      callback?.({ ok: false, error: err.message });
+    }
+  });
+
   socket.on('giveaways:addParticipant', ({ giveawayId, ...payload }, callback) => {
     if (!rejectUnlessAdmin(socket, callback)) return;
     try {
@@ -646,8 +684,8 @@ io.on('connection', (socket) => {
   });
 });
 
-subscribe((active) => {
-  io.emit('active:update', active);
+subscribe((state) => {
+  io.emit('active:update', state);
 });
 
 subscribeExpired((expired) => {
@@ -676,12 +714,16 @@ httpServer.listen(PORT, HOST, () => {
     console.log('Trust proxy увімкнено (reverse proxy / HTTPS)');
   }
   if (!isProd) {
+    console.log(`Головна:       http://localhost:5173/`);
     console.log(`Адмін-панель: http://localhost:5173/admin`);
-    console.log(`Меню для глядачів: http://localhost:5173/menu`);
+    console.log(`Меню:          http://localhost:5173/menu`);
+    console.log(`Розіграші:     http://localhost:5173/giveaways`);
     console.log(`Віджет OBS:   http://localhost:5173${widgetPath}`);
   } else {
+    console.log(`Головна:       /`);
     console.log(`Адмін-панель: /admin`);
-    console.log(`Меню для глядачів: /menu`);
+    console.log(`Меню:          /menu`);
+    console.log(`Розіграші:     /giveaways`);
     console.log(`Віджет OBS:   ${widgetPath}`);
   }
 });

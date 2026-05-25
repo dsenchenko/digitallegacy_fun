@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import {
+  effectiveNow,
   useActiveDebuffs,
   useCountdown,
   useTimerExpired,
@@ -16,8 +17,16 @@ const CATEGORY_VARIANT = {
   'major-requests': 'major',
 };
 
-function DebuffOverlay({ item }) {
-  const remaining = useCountdown(item.expiresAt);
+function formatDebuffPrice(item) {
+  if (item.price == null || item.price === '') {
+    return null;
+  }
+  return `${item.price} ${item.currency || 'грн'}`;
+}
+
+function DebuffOverlay({ item, paused, pausedAt }) {
+  const remaining = useCountdown(item.expiresAt, undefined, { paused, pausedAt });
+  const now = effectiveNow(paused, pausedAt);
   const variant = item.isRandomResult
     ? 'random'
     : item.categoryId.startsWith('cat-')
@@ -30,16 +39,19 @@ function DebuffOverlay({ item }) {
           0,
           Math.min(
             100,
-            ((item.expiresAt - Date.now()) /
-              (item.expiresAt - item.startedAt)) *
-              100
+            ((item.expiresAt - now) / (item.expiresAt - item.startedAt)) * 100
           )
         )
       : 100;
 
+  const price = formatDebuffPrice(item);
+
   return (
     <article className={`debuff-overlay debuff-overlay--${variant}`}>
-      <p className="debuff-overlay__label">{item.categoryName}</p>
+      <div className="debuff-overlay__head">
+        <p className="debuff-overlay__label">{item.categoryName}</p>
+        {price && <p className="debuff-overlay__price">{price}</p>}
+      </div>
       <h2 className="debuff-overlay__name">{item.name}</h2>
       {item.donorName && (
         <p className="debuff-overlay__donor">Донатер: {item.donorName}</p>
@@ -80,7 +92,7 @@ function GiveawayWinnerOverlay({ giveaway }) {
 
 export default function ObsWidget() {
   const { token } = useParams();
-  const { active } = useActiveDebuffs();
+  const { active, paused, pausedAt } = useActiveDebuffs();
   const { giveaways } = useGiveaways();
   const [valid, setValid] = useState(null);
 
@@ -132,9 +144,19 @@ export default function ObsWidget() {
         {widgetWinners.map((giveaway) => (
           <GiveawayWinnerOverlay key={giveaway.id} giveaway={giveaway} />
         ))}
-        {active.map((item) => (
-          <DebuffOverlay key={item.id} item={item} />
-        ))}
+        {active.length > 0 && (
+          <section className="widget-debuffs">
+            <h2 className="widget-debuffs__title">Інтерактивні донати</h2>
+            {active.map((item) => (
+              <DebuffOverlay
+                key={item.id}
+                item={item}
+                paused={paused}
+                pausedAt={pausedAt}
+              />
+            ))}
+          </section>
+        )}
       </div>
     </div>
   );

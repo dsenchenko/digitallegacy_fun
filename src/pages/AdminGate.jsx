@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { reconnectSocket } from '../socket';
 import AdminLogin from './AdminLogin';
 import AdminLayout from '../components/AdminLayout';
 import AdminPanel from './AdminPanel';
@@ -9,6 +11,12 @@ import '../styles/admin.css';
 export default function AdminGate() {
   const { loading, authenticated, configured, authSource, login, setup } =
     useAuth();
+
+  useEffect(() => {
+    if (!loading && authenticated) {
+      reconnectSocket();
+    }
+  }, [loading, authenticated]);
 
   if (loading) {
     return (

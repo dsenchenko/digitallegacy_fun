@@ -50,5 +50,5 @@ export function isValidWidgetToken(token) {
 
 export function getWidgetInfo() {
   const token = getWidgetToken();
-  return { token, path: `/widget/${token}` };
+  return { token, path: `/widgets/${token}` };
 }

@@ -4,6 +4,22 @@
   box-sizing: border-box;
 }
 
+:root {
+  --dl-bg: #111814;
+  --dl-bg-panel: #1a211c;
+  --dl-bg-elevated: #222b26;
+  --dl-border: #2d3832;
+  --dl-text: #eef2ef;
+  --dl-text-secondary: #9ca89f;
+  --dl-text-muted: #6b7a72;
+  --dl-green: #34d399;
+  --dl-green-hover: #4ade80;
+  --dl-green-soft: #10b981;
+  --dl-green-muted: rgba(52, 211, 153, 0.15);
+  --dl-content-max: 920px;
+  --dl-content-gutter: 1.25rem;
+}
+
 html,
 body,
 #root {
@@ -13,8 +29,8 @@ body,
 
 body {
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-  background: #0f1117;
-  color: #e8eaed;
+  background: var(--dl-bg);
+  color: var(--dl-text);
 }
 
 button {

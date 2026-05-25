@@ -1,0 +1,393 @@
+/* Public pages — dark green-gray + green accent (uses :root from global.css) */
+
+.public {
+  --mx-bg: var(--dl-bg);
+  --mx-bg-panel: var(--dl-bg-panel);
+  --mx-bg-elevated: var(--dl-bg-elevated);
+  --mx-green: var(--dl-green);
+  --mx-green-hover: var(--dl-green-hover);
+  --mx-green-soft: var(--dl-green-soft);
+  --mx-green-muted: var(--dl-green-muted);
+  --mx-border: var(--dl-border);
+  --mx-text: var(--dl-text);
+  --mx-text-secondary: var(--dl-text-secondary);
+  --mx-text-muted: var(--dl-text-muted);
+
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--mx-bg);
+  color: var(--mx-text-secondary);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+.public__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  width: 100%;
+  min-height: 0;
+}
+
+.public__inner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--dl-content-max);
+  margin: 0 auto;
+  padding: 0 var(--dl-content-gutter);
+  min-height: 0;
+}
+
+/* —— Sticky footer —— */
+
+.site-footer {
+  flex-shrink: 0;
+  width: 100%;
+  margin-top: auto;
+  border-top: 1px solid var(--mx-border);
+  background-color: var(--mx-bg-panel);
+  background-image: url('/header-bg.png');
+  background-repeat: repeat;
+  background-position: 0 0;
+}
+
+.site-footer__inner {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--dl-content-max);
+  margin: 0 auto;
+  padding: 0.85rem var(--dl-content-gutter);
+}
+
+.site-footer__nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem 0.75rem;
+}
+
+.site-footer__nav .social-links {
+  margin: 0;
+}
+
+.site-footer__link {
+  padding: 0.4rem 0.75rem;
+  border-radius: 8px;
+  color: var(--mx-text-secondary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.15s, background 0.15s;
+}
+
+.site-footer__link:hover {
+  color: var(--mx-green-hover);
+  background: var(--mx-bg-elevated);
+}
+
+.site-footer__link--donate {
+  color: var(--mx-text);
+  background: var(--mx-green-muted);
+  border: 1px solid rgba(52, 211, 153, 0.35);
+}
+
+.site-footer__link--donate:hover {
+  color: var(--mx-green-hover);
+  background: rgba(52, 211, 153, 0.22);
+}
+
+.site-footer__nav .social-links {
+  gap: 0.35rem;
+}
+
+/* —— Site header —— */
+
+.site-header {
+  width: 100%;
+  border-bottom: 1px solid var(--mx-border);
+  background-color: var(--mx-bg-panel);
+  background-image: url('/header-bg.png');
+  background-repeat: repeat;
+  background-position: 0 0;
+}
+
+.site-header__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--dl-content-max);
+  margin: 0 auto;
+  padding: 0.9rem var(--dl-content-gutter);
+}
+
+.site-header__brand {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  text-decoration: none;
+  line-height: 0;
+  transition: opacity 0.15s;
+}
+
+.site-header__brand:hover {
+  opacity: 0.88;
+}
+
+.site-header__logo {
+  display: block;
+  height: 2.25rem;
+  width: auto;
+  max-width: min(16rem, 72vw);
+  object-fit: contain;
+  object-position: left center;
+}
+
+.site-header__nav {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.site-header__link {
+  padding: 0.5rem 0.9rem;
+  border-radius: 8px;
+  color: var(--mx-text-secondary);
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.15s, background 0.15s;
+}
+
+.site-header__link:hover {
+  color: var(--mx-text);
+  background: var(--mx-bg-elevated);
+}
+
+.site-header__link--active {
+  color: var(--mx-green-hover);
+  background: var(--mx-green-muted);
+}
+
+.site-header__donate {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  background: var(--mx-green-soft);
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.site-header__donate:hover {
+  background: var(--mx-green);
+  transform: translateY(-1px);
+}
+
+@media (max-width: 720px) {
+  .site-header__inner {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+  }
+
+  .site-header__brand {
+    justify-content: center;
+  }
+
+  .site-header__logo {
+    object-position: center;
+    max-width: min(18rem, 90vw);
+  }
+
+  .site-header__nav {
+    justify-content: center;
+  }
+}
+
+/* —— Public page overrides (menu + home) —— */
+
+.public .menu,
+.public .home {
+  color: var(--mx-text-secondary);
+}
+
+.public .menu__loading,
+.public .menu__empty {
+  color: var(--mx-text-muted);
+}
+
+.public .menu__title {
+  color: var(--mx-text);
+  background: linear-gradient(135deg, var(--mx-text) 0%, var(--mx-green) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 700;
+}
+
+.public .menu__subtitle,
+.public .home__title {
+  color: var(--mx-text);
+}
+
+.public .home__article,
+.public .home__lead {
+  color: var(--mx-text-secondary);
+}
+
+.public .home__article strong,
+.public .home__lead strong {
+  color: var(--mx-text);
+}
+
+.public .home__inline-link {
+  color: var(--mx-green);
+}
+
+.public .home__inline-link:hover {
+  color: var(--mx-green-hover);
+}
+
+.public .home__callout-kicker {
+  color: var(--mx-green);
+}
+
+.public .home__callout {
+  border-color: rgba(52, 211, 153, 0.28);
+  border-left-color: var(--mx-green-soft);
+  background: linear-gradient(
+    135deg,
+    var(--mx-bg-panel) 0%,
+    rgba(16, 185, 129, 0.07) 100%
+  );
+}
+
+.public .home__figure {
+  border-color: var(--mx-border);
+  background: var(--mx-bg-panel);
+}
+
+.public .home__pullquote {
+  border-left-color: var(--mx-border);
+}
+
+.public .home__outro {
+  border-color: var(--mx-border);
+  background: var(--mx-bg-panel);
+}
+
+.public .menu__item-name,
+.public .menu__active-name,
+.public .menu__giveaway-title {
+  color: var(--mx-text);
+}
+
+.public .menu__item-meta,
+.public .menu__active-category,
+.public .menu__active-donor,
+.public .menu__giveaway-meta,
+.public .menu__giveaway-description {
+  color: var(--mx-text-muted);
+}
+
+.public .home__cta,
+.public .menu__giveaway-btn {
+  background: var(--mx-green-soft);
+  border: none;
+  color: #fff;
+  border-radius: 10px;
+  box-shadow: none;
+}
+
+.public .home__cta:hover,
+.public .menu__giveaway-btn:hover {
+  background: var(--mx-green);
+}
+
+.public .menu__item,
+.public .menu__active-item,
+.public .menu__giveaway-card {
+  background: var(--mx-bg-panel);
+  border: 1px solid var(--mx-border);
+  border-radius: 12px;
+  color: var(--mx-text-secondary);
+}
+
+.public .menu__item:hover {
+  border-color: rgba(52, 211, 153, 0.4);
+  background: var(--mx-bg-elevated);
+  color: var(--mx-text);
+  box-shadow: none;
+}
+
+.public .menu__section-title {
+  border-bottom-color: var(--mx-border);
+  color: var(--mx-green);
+}
+
+.public .menu__section-title--red {
+  color: #f0a8a8;
+}
+
+.public .menu__section-title--green {
+  color: var(--mx-green);
+}
+
+.public .menu__section-title--blue {
+  color: #93c5fd;
+}
+
+.public .menu__section-title--purple {
+  color: #c4b5fd;
+}
+
+.public .menu__section-title--teal {
+  color: #5eead4;
+}
+
+.public .menu__item-price {
+  background: var(--mx-green-muted);
+  border: 1px solid rgba(52, 211, 153, 0.25);
+  color: var(--mx-green-hover);
+  border-radius: 8px;
+}
+
+.public .menu__item:hover .menu__item-arrow {
+  color: var(--mx-green);
+}
+
+.public .menu__active-item {
+  border-color: rgba(52, 211, 153, 0.3);
+  background: linear-gradient(
+    135deg,
+    var(--mx-bg-panel) 0%,
+    rgba(16, 185, 129, 0.08) 100%
+  );
+}
+
+.public .menu__active-timer {
+  color: #fbbf24;
+  text-shadow: none;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.public .menu__active-timer--live {
+  color: var(--mx-green);
+}
+
+.public .menu__giveaway-winner {
+  color: #fbbf24;
+}

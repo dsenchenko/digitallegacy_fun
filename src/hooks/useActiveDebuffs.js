@@ -1,16 +1,38 @@
-import { useEffect, useState } from 'react';
-import { io } from 'socket.io-client';
+import { useCallback, useEffect, useState } from 'react';
+import { emitWithAck, socket } from '../socket';
 
-const socket = io({ autoConnect: true, withCredentials: true });
+function parseActivePayload(payload) {
+  if (Array.isArray(payload)) {
+    return { active: payload, paused: false, pausedAt: null };
+  }
+  return {
+    active: payload?.active ?? [],
+    paused: Boolean(payload?.paused),
+    pausedAt: payload?.pausedAt ?? null,
+  };
+}
+
+export function effectiveNow(paused, pausedAt) {
+  return paused && pausedAt ? pausedAt : Date.now();
+}
 
 export function useActiveDebuffs() {
   const [active, setActive] = useState([]);
+  const [paused, setPaused] = useState(false);
+  const [pausedAt, setPausedAt] = useState(null);
   const [connected, setConnected] = useState(socket.connected);
+
+  const applyPayload = useCallback((payload) => {
+    const next = parseActivePayload(payload);
+    setActive(next.active);
+    setPaused(next.paused);
+    setPausedAt(next.pausedAt);
+  }, []);
 
   useEffect(() => {
     const onConnect = () => setConnected(true);
     const onDisconnect = () => setConnected(false);
-    const onUpdate = (next) => setActive(next);
+    const onUpdate = (payload) => applyPayload(payload);
 
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
@@ -18,7 +40,7 @@ export function useActiveDebuffs() {
 
     fetch('/api/active')
       .then((r) => r.json())
-      .then((data) => setActive(data.active))
+      .then((data) => applyPayload(data))
       .catch(() => {});
 
     return () => {
@@ -26,37 +48,42 @@ export function useActiveDebuffs() {
       socket.off('disconnect', onDisconnect);
       socket.off('active:update', onUpdate);
     };
-  }, []);
+  }, [applyPayload]);
 
   const activate = (donationId, donorName = '') =>
-    new Promise((resolve, reject) => {
-      socket.emit(
-        'active:activate',
-        { donationId, donorName },
-        (res) => {
-          if (res?.ok) resolve(res.debuff);
-          else reject(new Error(res?.error ?? 'Не вдалося активувати'));
-        }
-      );
+    emitWithAck('active:activate', { donationId, donorName }).then(
+      (res) => res.debuff
+    );
+
+  const deactivate = (id) => emitWithAck('active:deactivate', { id });
+
+  const clearAll = () => emitWithAck('active:clear', {});
+
+  const setPausedAll = (shouldPause) =>
+    emitWithAck('active:setPaused', { paused: shouldPause }).then((res) => {
+      applyPayload(res);
+      return res;
     });
 
-  const deactivate = (id) =>
-    new Promise((resolve, reject) => {
-      socket.emit('active:deactivate', { id }, (res) => {
-        if (res?.ok) resolve();
-        else reject(new Error('Не вдалося деактивувати'));
-      });
-    });
+  const pauseAll = () => setPausedAll(true);
+  const resumeAll = () => setPausedAll(false);
 
-  const clearAll = () =>
-    new Promise((resolve, reject) => {
-      socket.emit('active:clear', {}, (res) => {
-        if (res?.ok) resolve();
-        else reject(new Error('Не вдалося очистити'));
-      });
-    });
+  const adjustTime = (id, deltaSeconds) =>
+    emitWithAck('active:adjustTime', { id, deltaSeconds }).then((res) => res.debuff);
 
-  return { active, connected, activate, deactivate, clearAll };
+  return {
+    active,
+    paused,
+    pausedAt,
+    connected,
+    activate,
+    deactivate,
+    clearAll,
+    pauseAll,
+    resumeAll,
+    setPausedAll,
+    adjustTime,
+  };
 }
 
 export function useTimerExpired(onExpired) {
@@ -70,9 +97,9 @@ export function useTimerExpired(onExpired) {
   }, [onExpired]);
 }
 
-export function formatRemaining(expiresAt) {
+export function formatRemaining(expiresAt, now = Date.now()) {
   if (!expiresAt) return null;
-  const ms = Math.max(0, expiresAt - Date.now());
+  const ms = Math.max(0, expiresAt - now);
   const totalSec = Math.ceil(ms / 1000);
   const h = Math.floor(totalSec / 3600);
   const m = Math.floor((totalSec % 3600) / 60);
@@ -83,22 +110,24 @@ export function formatRemaining(expiresAt) {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
-export function useCountdown(expiresAt, onComplete) {
+export function useCountdown(expiresAt, onComplete, { paused = false, pausedAt = null } = {}) {
   const [, tick] = useState(0);
+  const frozen = paused && pausedAt;
+  const now = frozen ? pausedAt : Date.now();
 
   useEffect(() => {
-    if (!expiresAt) return;
+    if (!expiresAt || frozen) return;
     const id = setInterval(() => tick((t) => t + 1), 250);
     return () => clearInterval(id);
-  }, [expiresAt]);
+  }, [expiresAt, frozen]);
 
   useEffect(() => {
-    if (!expiresAt || !onComplete) return;
+    if (!expiresAt || !onComplete || frozen) return;
     const ms = expiresAt - Date.now();
     if (ms <= 0) return;
     const id = setTimeout(onComplete, ms);
     return () => clearTimeout(id);
-  }, [expiresAt, onComplete]);
+  }, [expiresAt, onComplete, frozen]);
 
-  return formatRemaining(expiresAt);
+  return formatRemaining(expiresAt, now);
 }

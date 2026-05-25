@@ -1,9 +1,9 @@
-import { NavLink } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useActiveDebuffs } from '../hooks/useActiveDebuffs';
 
-function navLinkClass({ isActive }) {
-  return `admin__nav-link${isActive ? ' admin__nav-link--active' : ''}`;
+function navClass({ isActive }) {
+  return `site-header__link${isActive ? ' site-header__link--active' : ''}`;
 }
 
 export default function AdminHeader() {
@@ -11,38 +11,46 @@ export default function AdminHeader() {
   const { connected } = useActiveDebuffs();
 
   return (
-    <header className="admin__header">
-      <nav className="admin__nav" aria-label="Навігація адмін-панелі">
-        <NavLink className={navLinkClass} to="/admin" end>
-          Донати
-        </NavLink>
-        <NavLink className={navLinkClass} to="/admin/giveaways">
-          Розіграші
-        </NavLink>
-        <a
-          className="admin__nav-link"
-          href="/menu"
-          target="_blank"
-          rel="noreferrer"
-        >
-          Меню ↗
-        </a>
-      </nav>
-
-      <div className="admin__header-tools">
-        <div className="admin__status">
-          <span
-            className={`admin__status-dot${connected ? ' admin__status-dot--online' : ''}`}
+    <header className="site-header">
+      <div className="site-header__inner">
+        <Link to="/admin" className="site-header__brand" aria-label="Адмін-панель">
+          <img
+            className="site-header__logo"
+            src="/logo.png"
+            alt="Digital Legacy"
+            decoding="async"
           />
-          {connected ? 'Підключено' : 'Відключено'}
-        </div>
-        <button
-          type="button"
-          className="catalog-btn catalog-btn--ghost catalog-btn--small"
-          onClick={() => logout()}
-        >
-          Вийти
-        </button>
+        </Link>
+
+        <nav className="site-header__nav" aria-label="Навігація адмін-панелі">
+          <NavLink to="/admin" end className={navClass}>
+            Донати
+          </NavLink>
+          <NavLink to="/admin/giveaways" className={navClass}>
+            Розіграші
+          </NavLink>
+          <a
+            className="site-header__link"
+            href="/menu"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Меню ↗
+          </a>
+          <div className="admin__status">
+            <span
+              className={`admin__status-dot${connected ? ' admin__status-dot--online' : ''}`}
+            />
+            {connected ? 'Підключено' : 'Відключено'}
+          </div>
+          <button
+            type="button"
+            className="site-header__link admin__logout"
+            onClick={() => logout()}
+          >
+            Вийти
+          </button>
+        </nav>
       </div>
     </header>
   );

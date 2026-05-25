@@ -1,0 +1,220 @@
+.home {
+  flex: 1;
+  width: 100%;
+  padding: 1.5rem 0 2.5rem;
+  min-height: 0;
+}
+
+/* —— Article body —— */
+
+.home__article {
+  width: 100%;
+  max-width: 100%;
+  font-size: 1.05rem;
+  line-height: 1.75;
+  color: var(--dl-text-secondary);
+}
+
+.home__article p {
+  margin: 0 0 1.15rem;
+}
+
+.home__article strong {
+  color: var(--dl-text);
+  font-weight: 600;
+}
+
+.home__title {
+  margin: 0 0 1.75rem;
+  font-size: clamp(1.45rem, 4.5vw, 1.9rem);
+  font-weight: 800;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+  color: var(--dl-text);
+}
+
+/* Intro + author portrait */
+
+.home__intro {
+  margin-bottom: 2rem;
+  overflow: hidden;
+}
+
+.home__intro::after {
+  content: '';
+  display: table;
+  clear: both;
+}
+
+.home__lead {
+  margin: 0;
+}
+
+.home__lead strong {
+  color: var(--dl-text);
+}
+
+/* Sections */
+
+.home__section {
+  margin-bottom: 2rem;
+}
+
+/* Mirrored intro: images left, text right */
+
+.home__section--mirror {
+  overflow: hidden;
+}
+
+.home__section--mirror::after {
+  content: '';
+  display: table;
+  clear: both;
+}
+
+.home__section--mirror > p {
+  margin: 0;
+}
+
+/* Figures (smaller, in-flow) */
+
+.home__figure {
+  margin: 0 0 1.25rem;
+  padding: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--dl-border);
+  background: var(--dl-bg-panel);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
+}
+
+.home__figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  vertical-align: middle;
+}
+
+.home__figure--portrait {
+  float: right;
+  width: min(9.5rem, 34%);
+  margin: 0 0 1rem 1.25rem;
+}
+
+.home__figure--portrait img {
+  aspect-ratio: 9 / 16;
+  object-fit: cover;
+}
+
+.home__section--mirror .home__figure--pov {
+  float: left;
+  width: min(10.5rem, 36%);
+  margin: 0 1.25rem 0.75rem 0;
+}
+
+.home__section--mirror .home__figure--pov img {
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+}
+
+/* Military fundraising — callout block */
+
+.home__callout {
+  margin: 0 0 2rem;
+  padding: 1.1rem 1.2rem 1.15rem;
+  border-radius: 10px;
+  border: 1px solid rgba(52, 211, 153, 0.28);
+  border-left: 4px solid var(--dl-green-soft);
+  background: linear-gradient(
+    135deg,
+    var(--dl-bg-panel) 0%,
+    rgba(16, 185, 129, 0.07) 100%
+  );
+}
+
+.home__callout p {
+  margin: 0;
+}
+
+.home__callout p + p {
+  margin-top: 0.75rem;
+}
+
+.home__callout-kicker {
+  margin: 0 0 0.65rem !important;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dl-green);
+}
+
+/* Donations philosophy — pull quote */
+
+.home__pullquote {
+  margin: 0 0 2rem;
+  padding: 0 0 0 1.15rem;
+  border: none;
+  border-left: 3px solid var(--dl-border);
+  font-style: italic;
+  color: var(--dl-text-secondary);
+}
+
+.home__pullquote p {
+  margin: 0 0 0.65rem;
+}
+
+.home__pullquote footer {
+  font-style: normal;
+  color: var(--dl-text-muted);
+}
+
+/* Closing + social links */
+
+.home__outro {
+  padding: 1.15rem 1.2rem;
+  border-radius: 10px;
+  border: 1px solid var(--dl-border);
+  background: var(--dl-bg-panel);
+}
+
+.home__outro p {
+  margin: 0;
+}
+
+.home__inline-link {
+  color: var(--dl-green);
+  font-weight: 600;
+  font-style: normal;
+  text-decoration: underline;
+  text-decoration-color: rgba(52, 211, 153, 0.45);
+  text-underline-offset: 0.15em;
+  transition: color 0.15s;
+}
+
+.home__inline-link:hover {
+  color: var(--dl-green-hover);
+}
+
+@media (max-width: 640px) {
+  .home__article {
+    font-size: 1rem;
+  }
+
+  .home__figure--portrait {
+    float: none;
+    width: min(12rem, 72%);
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .home__section--mirror .home__figure--pov {
+    float: none;
+    width: min(12rem, 72%);
+    margin: 0 auto 1.15rem;
+  }
+
+  .home__section--mirror > p {
+    margin-bottom: 0;
+  }
+}

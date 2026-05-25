@@ -1,5 +1,10 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate, useParams } from 'react-router-dom';
+
+export function LegacyWidgetRedirect() {
+  const { token } = useParams();
+  return <Navigate to={`/widgets/${token}`} replace />;
+}
 
 export default function WidgetRedirect() {
   const navigate = useNavigate();

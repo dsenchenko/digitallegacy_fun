@@ -1,11 +1,14 @@
 import { Outlet } from 'react-router-dom';
 import AdminHeader from './AdminHeader';
+import '../styles/matrix.css';
 
 export default function AdminLayout() {
   return (
-    <main className="admin">
+    <>
       <AdminHeader />
-      <Outlet />
-    </main>
+      <main className="admin">
+        <Outlet />
+      </main>
+    </>
   );
 }

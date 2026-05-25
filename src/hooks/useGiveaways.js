@@ -1,15 +1,8 @@
 import { useEffect, useState } from 'react';
-import { io } from 'socket.io-client';
-
-const socket = io({ autoConnect: true, withCredentials: true });
+import { emitWithAck, socket } from '../socket';
 
 function emitGiveaway(event, payload) {
-  return new Promise((resolve, reject) => {
-    socket.emit(event, payload, (res) => {
-      if (res?.ok) resolve(res);
-      else reject(new Error(res?.error ?? 'Помилка операції'));
-    });
-  });
+  return emitWithAck(event, payload);
 }
 
 export function useGiveaways() {

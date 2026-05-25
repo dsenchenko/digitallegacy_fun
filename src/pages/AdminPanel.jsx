@@ -4,11 +4,11 @@ import { useWidgetUrl } from '../hooks/useWidgetUrl';
 import { useActiveDebuffs, useCountdown } from '../hooks/useActiveDebuffs';
 import '../styles/admin.css';
 
-function ActiveItem({ item, onStop }) {
-  const remaining = useCountdown(item.expiresAt);
+function ActiveItem({ item, onStop, paused, pausedAt }) {
+  const remaining = useCountdown(item.expiresAt, undefined, { paused, pausedAt });
 
   return (
-    <li className="active-item">
+    <li className={`active-item${paused ? ' active-item--paused' : ''}`}>
       <div className="active-item__info">
         <p className="active-item__name">{item.name}</p>
         {item.isRandomResult && (
@@ -20,7 +20,10 @@ function ActiveItem({ item, onStop }) {
       </div>
       <div className="active-item__right">
         {item.hasTimer && item.expiresAt ? (
-          <span className="active-item__timer">{remaining}</span>
+          <span className="active-item__timer">
+            {paused ? '⏸ ' : ''}
+            {remaining}
+          </span>
         ) : (
           <span className="active-item__timer active-item__timer--infinite">
             Активно
@@ -38,9 +41,89 @@ function ActiveItem({ item, onStop }) {
   );
 }
 
+const LIVE_SKIP_SECONDS = 30;
+const LIVE_SKIP_MINUTES = 60;
+
+function getActiveDebuffForDonation(donationId, active) {
+  return active.find((item) => item.donationId === donationId) ?? null;
+}
+
+function DonationCardLiveOverlay({ activeItem, paused, pausedAt, onAdjustTime }) {
+  const remaining = useCountdown(activeItem.expiresAt, undefined, {
+    paused,
+    pausedAt,
+  });
+  const hasTimer = activeItem.hasTimer && activeItem.expiresAt;
+
+  const handleAdjust = (deltaSeconds) => {
+    onAdjustTime(activeItem.id, deltaSeconds);
+  };
+
+  return (
+    <div className="donation-card__live-overlay">
+      {hasTimer ? (
+        <div className="donation-card__live-controls">
+          <button
+            type="button"
+            className="donation-card__live-skip"
+            onClick={() => handleAdjust(-LIVE_SKIP_MINUTES)}
+            title="Зменшити на 1 хвилину"
+            aria-label="Зменшити на 1 хвилину"
+          >
+            −1 хв
+          </button>
+          <button
+            type="button"
+            className="donation-card__live-skip donation-card__live-skip--fine"
+            onClick={() => handleAdjust(-LIVE_SKIP_SECONDS)}
+            title="Зменшити на 30 секунд"
+            aria-label="Зменшити на 30 секунд"
+          >
+            −30 с
+          </button>
+          <div className="donation-card__live-timer" aria-live="polite">
+            {paused && (
+              <span className="donation-card__live-paused" aria-hidden="true">
+                ⏸{' '}
+              </span>
+            )}
+            {remaining}
+          </div>
+          <button
+            type="button"
+            className="donation-card__live-skip donation-card__live-skip--fine"
+            onClick={() => handleAdjust(LIVE_SKIP_SECONDS)}
+            title="Додати 30 секунд"
+            aria-label="Додати 30 секунд"
+          >
+            +30 с
+          </button>
+          <button
+            type="button"
+            className="donation-card__live-skip"
+            onClick={() => handleAdjust(LIVE_SKIP_MINUTES)}
+            title="Додати 1 хвилину"
+            aria-label="Додати 1 хвилину"
+          >
+            +1 хв
+          </button>
+        </div>
+      ) : (
+        <p className="donation-card__live-timer donation-card__live-timer--infinite">
+          Активно
+        </p>
+      )}
+    </div>
+  );
+}
+
 function DonationCard({
   donation,
+  activeDebuffs,
+  paused,
+  pausedAt,
   onActivate,
+  onAdjustTime,
   onUpdateName,
   onUpdatePrice,
   onUpdateDuration,
@@ -51,6 +134,8 @@ function DonationCard({
   savingDuration,
   deleting,
 }) {
+  const activeItem = getActiveDebuffForDonation(donation.id, activeDebuffs);
+  const isActive = activeItem !== null;
   const [donorName, setDonorName] = useState('');
   const [nameInput, setNameInput] = useState(donation.name);
   const [priceInput, setPriceInput] = useState(String(donation.price));
@@ -137,89 +222,106 @@ function DonationCard({
 
   return (
     <article
-      className={`donation-card${donation.isRandom ? ' donation-card--random' : ''}${donation.isCustom ? ' donation-card--custom' : ''}`}
+      className={`donation-card${isActive ? ' donation-card--live' : ''}${donation.isRandom ? ' donation-card--random' : ''}${donation.isCustom ? ' donation-card--custom' : ''}`}
+      aria-current={isActive ? 'true' : undefined}
     >
-      <div className="donation-card__price-row">
-        <label className="donation-card__price-label">
-          Назва
-          <div className="donation-card__price-edit donation-card__price-edit--name">
-            <input
-              className="donation-card__name-input"
-              type="text"
-              value={nameInput}
-              onChange={(e) => setNameInput(e.target.value)}
-              onBlur={handleBlurName}
-              disabled={savingName}
-            />
+      <button
+        type="button"
+        className="donation-card__close"
+        disabled={busy || deleting}
+        onClick={handleDelete}
+        aria-label={`Видалити «${donation.name}»`}
+        title="Видалити"
+      >
+        {deleting ? '…' : '×'}
+      </button>
+
+      <div className="donation-card__body">
+        <div className="donation-card__name-block">
+          <div className="donation-card__name-row">
+            <span className="donation-card__name-row__title">Назва</span>
+            <span className="donation-card__meta">{meta}</span>
           </div>
-        </label>
-      </div>
-      <p className="donation-card__meta">{meta}</p>
-      <div className="donation-card__price-row">
-        <label className="donation-card__price-label">
-          Ціна
-          <div className="donation-card__price-edit">
-            <input
-              className="donation-card__price-input"
-              type="number"
-              min="1"
-              step="1"
-              value={priceInput}
-              onChange={(e) => setPriceInput(e.target.value)}
-              onBlur={handleBlurPrice}
-              disabled={savingPrice}
-            />
-            <span className="donation-card__price-currency">
-              {donation.currency}
-            </span>
-          </div>
-        </label>
-      </div>
-      {!donation.isRandom && (
-        <div className="donation-card__price-row">
-          <label className="donation-card__price-label">
-            Тривалість (хв, 0 = без таймера)
+          <input
+            className="donation-card__name-input"
+            type="text"
+            value={nameInput}
+            onChange={(e) => setNameInput(e.target.value)}
+            onBlur={handleBlurName}
+            disabled={savingName}
+          />
+        </div>
+        <div
+          className={`donation-card__fields-row${donation.isRandom ? ' donation-card__fields-row--price-only' : ''}`}
+        >
+          <label className="donation-card__price-label donation-card__price-label--price">
+            Ціна
             <div className="donation-card__price-edit">
               <input
                 className="donation-card__price-input"
                 type="number"
-                min="0"
+                min="1"
                 step="1"
-                value={durationInput}
-                onChange={(e) => setDurationInput(e.target.value)}
-                onBlur={handleBlurDuration}
-                disabled={savingDuration}
+                value={priceInput}
+                onChange={(e) => setPriceInput(e.target.value)}
+                onBlur={handleBlurPrice}
+                disabled={savingPrice}
               />
+              <span className="donation-card__price-currency">
+                {donation.currency}
+              </span>
             </div>
           </label>
+          {!donation.isRandom && (
+            <label className="donation-card__price-label donation-card__price-label--duration">
+              Тривалість
+              <div className="donation-card__price-edit">
+                <input
+                  className="donation-card__price-input"
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={durationInput}
+                  onChange={(e) => setDurationInput(e.target.value)}
+                  onBlur={handleBlurDuration}
+                  disabled={savingDuration}
+                />
+              </div>
+            </label>
+          )}
         </div>
-      )}
-      <div className="donation-card__actions">
-        <input
-          className="donation-card__input"
-          type="text"
-          placeholder="Ім'я донатера (необов'язково)"
-          value={donorName}
-          onChange={(e) => setDonorName(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && !busy && handleActivate()}
-        />
-        <button
-          type="button"
-          className="donation-card__btn"
-          disabled={busy || deleting}
-          onClick={handleActivate}
-        >
-          Активувати
-        </button>
-        <button
-          type="button"
-          className="donation-card__btn donation-card__btn--danger"
-          disabled={busy || deleting}
-          onClick={handleDelete}
-        >
-          {deleting ? '...' : 'Видалити'}
-        </button>
+        <label className="donation-card__price-label">
+          Ім&apos;я донатера
+          <input
+            className="donation-card__name-input"
+            type="text"
+            placeholder="Необов'язково"
+            value={donorName}
+            onChange={(e) => setDonorName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && !busy && handleActivate()}
+            disabled={busy || deleting}
+          />
+        </label>
       </div>
+
+      {isActive && activeItem && (
+        <DonationCardLiveOverlay
+          activeItem={activeItem}
+          paused={paused}
+          pausedAt={pausedAt}
+          onAdjustTime={onAdjustTime}
+        />
+      )}
+
+      <button
+        type="button"
+        className={`donation-card__btn donation-card__btn--activate${isActive ? ' donation-card__btn--live' : ''}`}
+        disabled={busy || deleting || isActive}
+        onClick={handleActivate}
+        aria-pressed={isActive}
+      >
+        {isActive ? 'Активно' : 'Активувати'}
+      </button>
     </article>
   );
 }
@@ -324,6 +426,10 @@ function AddDonationForm({ categoryId, onAdd, busy }) {
 
 function CategorySection({
   category,
+  activeDebuffs,
+  paused,
+  pausedAt,
+  onAdjustTime,
   busyId,
   savingNameId,
   savingPriceId,
@@ -401,6 +507,10 @@ function CategorySection({
           <DonationCard
             key={donation.id}
             donation={donation}
+            activeDebuffs={activeDebuffs}
+            paused={paused}
+            pausedAt={pausedAt}
+            onAdjustTime={onAdjustTime}
             busy={busyId === donation.id}
             savingName={savingNameId === donation.id}
             savingPrice={savingPriceId === donation.id}
@@ -455,7 +565,17 @@ function AddCategoryForm({ onAdd, busy }) {
 }
 
 export default function AdminPanel() {
-  const { active, activate, deactivate, clearAll } = useActiveDebuffs();
+  const {
+    active,
+    paused,
+    pausedAt,
+    activate,
+    deactivate,
+    clearAll,
+    pauseAll,
+    resumeAll,
+    adjustTime,
+  } = useActiveDebuffs();
   const {
     categories,
     updatePrice,
@@ -488,6 +608,15 @@ export default function AdminPanel() {
       setError(err.message);
     } finally {
       setBusyId(null);
+    }
+  };
+
+  const handleAdjustTime = async (activeId, deltaSeconds) => {
+    setError('');
+    try {
+      await adjustTime(activeId, deltaSeconds);
+    } catch (err) {
+      setError(err.message);
     }
   };
 
@@ -633,15 +762,27 @@ export default function AdminPanel() {
         <div className="active-panel__header">
           <h2 className="active-panel__title">
             Зараз активні ({active.length})
+            {paused && (
+              <span className="active-panel__paused-badge">Пауза</span>
+            )}
           </h2>
           {active.length > 0 && (
-            <button
-              type="button"
-              className="active-panel__clear"
-              onClick={() => clearAll()}
-            >
-              Очистити все
-            </button>
+            <div className="active-panel__actions">
+              <button
+                type="button"
+                className={`active-panel__pause${paused ? ' active-panel__pause--resume' : ''}`}
+                onClick={() => (paused ? resumeAll() : pauseAll())}
+              >
+                {paused ? 'Продовжити' : 'Пауза всіх'}
+              </button>
+              <button
+                type="button"
+                className="active-panel__clear"
+                onClick={() => clearAll()}
+              >
+                Очистити все
+              </button>
+            </div>
           )}
         </div>
         {active.length === 0 ? (
@@ -654,6 +795,8 @@ export default function AdminPanel() {
               <ActiveItem
                 key={item.id}
                 item={item}
+                paused={paused}
+                pausedAt={pausedAt}
                 onStop={(id) => deactivate(id)}
               />
             ))}
@@ -667,6 +810,10 @@ export default function AdminPanel() {
         <CategorySection
           key={category.id}
           category={category}
+          activeDebuffs={active}
+          paused={paused}
+          pausedAt={pausedAt}
+          onAdjustTime={handleAdjustTime}
           busyId={busyId}
           savingNameId={savingNameId}
           savingPriceId={savingPriceId}

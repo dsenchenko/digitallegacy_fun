@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { reconnectSocket } from '../socket';
 
 async function parseJsonResponse(response) {
   const data = await response.json().catch(() => ({}));
@@ -37,6 +38,7 @@ export function useAuth() {
       body: JSON.stringify({ password }),
     }).then(parseJsonResponse);
     await refresh();
+    reconnectSocket();
   };
 
   const setup = async (password) => {
@@ -47,6 +49,7 @@ export function useAuth() {
       body: JSON.stringify({ password }),
     }).then(parseJsonResponse);
     await refresh();
+    reconnectSocket();
   };
 
   const logout = async () => {
@@ -55,6 +58,7 @@ export function useAuth() {
       credentials: 'include',
     }).catch(() => {});
     await refresh();
+    reconnectSocket();
   };
 
   return {
