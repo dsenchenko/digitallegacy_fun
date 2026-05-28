@@ -29,6 +29,26 @@ html.widget-route body {
   width: 480px;
 }
 
+.widget-menu-banner {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(52, 211, 153, 0.45);
+  background: rgba(6, 24, 18, 0.88);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+  text-align: center;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.widget-menu-banner__cmd {
+  color: #fbbf24;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
 .widget-debuffs {
   display: flex;
   flex-direction: column;

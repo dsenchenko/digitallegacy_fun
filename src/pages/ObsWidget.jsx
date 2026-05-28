@@ -10,6 +10,15 @@ import { useGiveaways } from '../hooks/useGiveaways';
 import { playTimerExpiredSound } from '../utils/timerSound';
 import '../styles/widget.css';
 
+function WidgetMenuBanner() {
+  return (
+    <p className="widget-menu-banner">
+      Працює інтерактивне меню донатів. Посилання в чаті по команді{' '}
+      <span className="widget-menu-banner__cmd">!menu</span>
+    </p>
+  );
+}
+
 const CATEGORY_VARIANT = {
   'game-debuffs': 'debuff',
   music: 'music',
@@ -134,19 +143,16 @@ export default function ObsWidget() {
     );
   }
 
-  if (active.length === 0 && widgetWinners.length === 0) {
-    return <div className="widget-page widget-empty" />;
-  }
-
   return (
     <div className="widget-page">
       <div className="widget-stack">
+        <WidgetMenuBanner />
         {widgetWinners.map((giveaway) => (
           <GiveawayWinnerOverlay key={giveaway.id} giveaway={giveaway} />
         ))}
         {active.length > 0 && (
           <section className="widget-debuffs">
-            <h2 className="widget-debuffs__title">Інтерактивні донати</h2>
+            <h2 className="widget-debuffs__title">Активні донати</h2>
             {active.map((item) => (
               <DebuffOverlay
                 key={item.id}
